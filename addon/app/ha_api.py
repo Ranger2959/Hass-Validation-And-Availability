@@ -1,4 +1,4 @@
-"""HA data fetchers -- WebSocket access to the device/area/floor registries.
+"""HA data fetchers -- WebSocket access to the device/area/floor registries and the entity registry.
 
 Home Assistant does not expose its registries through the REST API (there are
 no /api/devices, /api/areas or /api/floors endpoints), so we use the WebSocket
@@ -123,10 +123,11 @@ def save_verified(verified: dict[str, dict[str, str]]) -> None:
 
 async def get_device_board() -> list[dict]:
     """Fetch all devices joined with their area and floor."""
-    raw_devices, raw_areas, raw_floors = await asyncio.gather(
+    raw_devices, raw_areas, raw_floors, raw_entity_reg = await asyncio.gather(
         _ws_call("config/device_registry/list"),
         _ws_call("config/area_registry/list"),
         _ws_call("config/floor_registry/list"),
+        _ws_call("config/entity_registry/list"),
     )
     devices = _entries(raw_devices, "device", "id", "device_id")
 
@@ -135,6 +136,13 @@ async def get_device_board() -> list[dict]:
 
     areas_by_id = {a["id"]: a for a in areas}
     floors_by_id = {f["id"]: f for f in floors}
+
+    entity_reg = _entries(raw_entity_reg, "entity", "entity_id", "id")
+    entities_by_device: dict[str, list[str]] = {}
+    for ent in entity_reg:
+        dev_id = ent.get("device_id")
+        if dev_id:
+            entities_by_device.setdefault(dev_id, []).append(ent["id"])
 
     verified = load_verified()
 
@@ -162,7 +170,7 @@ async def get_device_board() -> list[dict]:
                 "location": location,
                 "verified_floor": saved.get("floor"),
                 "verified_area": saved.get("area"),
-                "entities": dev.get("entity_ids") or [],
+                "entities": entities_by_device.get(dev["id"]) or [],
                 "verified_entity": saved.get("entity"),
             }
         )
