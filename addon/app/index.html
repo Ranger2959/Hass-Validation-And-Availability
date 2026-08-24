@@ -123,7 +123,7 @@ function render() {
     tdName.textContent = r.name;
     const tdInt = document.createElement("td");
     tdInt.className = "location";
-    tdInt.textContent = r.integration || "\u2014";
+    tdInt.textContent = r.platform || "\u2014";
     const tdLoc = document.createElement("td");
     tdLoc.className = "location";
     tdLoc.textContent = r.location || "\u2014";
