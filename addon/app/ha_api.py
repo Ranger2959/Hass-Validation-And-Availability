@@ -108,7 +108,7 @@ async def get_device_board() -> list[dict]:
     )
     devices = _entries(raw_devices, "device", "id", "device_id")
     
-    _LOGGER.info(devices)
+    #_LOGGER.info(devices)
     _LOGGER.info(raw_entries)
 
     areas = _entries(raw_areas, "area", "area_id", "id")
