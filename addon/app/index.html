@@ -75,8 +75,9 @@
   .overlay {
     position: fixed; inset: 0; z-index: 10;
     background: rgba(0, 0, 0, 0.5);
-    display: flex; align-items: center; justify-content: center; padding: 16px;
+    align-items: center; justify-content: center; padding: 16px;
   }
+  .overlay.open { display: flex; }
   .modal {
     position: relative; background: var(--card); border: 1px solid var(--border);
     border-radius: 12px; padding: 20px 24px; min-width: 320px; max-width: 480px;
@@ -193,10 +194,12 @@ function openDevice(r) {
     window.location.href = window.location.origin + "/config/devices/device/" + r.id;
   };
   $overlay.hidden = false;
+  $overlay.classList.add("open");
 }
 
 function closeDevice() {
   $overlay.hidden = true;
+  $overlay.classList.remove("open");
 }
 
 $modalClose.onclick = closeDevice;
