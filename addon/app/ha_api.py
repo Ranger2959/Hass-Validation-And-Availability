@@ -6,7 +6,9 @@ API (config/*_registry/list) -- the same mechanism the HA frontend uses.
 """
 
 import asyncio
+import json
 import logging
+import os
 
 import aiohttp
 
@@ -98,6 +100,27 @@ async def _ws_call(command: str):
                 )
 
 
+VERIFIED_PATH = "/data/verified.json"
+
+
+def load_verified() -> dict[str, dict[str, str]]:
+    """Load saved device_id -> {"floor": ..., "area": ...} verification data."""
+    try:
+        with open(VERIFIED_PATH, "r") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def save_verified(verified: dict[str, dict[str, str]]) -> None:
+    os.makedirs(os.path.dirname(VERIFIED_PATH), exist_ok=True)
+    tmp = VERIFIED_PATH + ".tmp"
+    with open(tmp, "w") as f:
+        json.dump(verified, f, indent=2)
+    os.replace(tmp, VERIFIED_PATH)
+
+
 async def get_device_board() -> list[dict]:
     """Fetch all devices joined with their area and floor."""
     raw_devices, raw_areas, raw_floors = await asyncio.gather(
@@ -112,6 +135,8 @@ async def get_device_board() -> list[dict]:
 
     areas_by_id = {a["id"]: a for a in areas}
     floors_by_id = {f["id"]: f for f in floors}
+
+    verified = load_verified()
 
     rows = []
     for dev in devices:
@@ -134,6 +159,8 @@ async def get_device_board() -> list[dict]:
                 "floor": floor_name,
                 "area": area_name,
                 "location": location,
+                "verified_floor": (verified.get(dev["id"]) or {}).get("floor"),
+                "verified_area": (verified.get(dev["id"]) or {}).get("area"),
             }
         )
 

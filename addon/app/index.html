@@ -63,6 +63,9 @@
   tbody tr:hover { background: rgba(128, 128, 128, 0.08); }
   td.name { font-weight: 600; }
   td.location { color: var(--muted); white-space: nowrap; }
+  td.icon { width: 28px; text-align: center; }
+  th.verify, td.verify { text-align: right; }
+  td.verify button { padding: 4px 10px; font-size: 12px; }
   .status { padding: 24px 16px; color: var(--muted); text-align: center; font-size: 14px; }
   .status.error { color: var(--danger); }
   .spin {
@@ -106,7 +109,7 @@
     <div class="status" id="status"><span class="spin"></span>Loading devices&hellip;</div>
     <table id="table" hidden>
       <thead>
-        <tr><th>Device</th><th>Floor / Area</th></tr>
+        <tr><th></th><th>Device</th><th>Floor / Area</th><th class="verify">Verify</th></tr>
       </thead>
       <tbody id="rows"></tbody>
     </table>
@@ -153,13 +156,29 @@ function render() {
     const tr = document.createElement("tr");
     tr.className = "device";
     tr.addEventListener("click", () => openDevice(r));
+    const verified = r.verified_floor === r.floor && r.verified_area === r.area;
+    const tdIcon = document.createElement("td");
+    tdIcon.className = "icon";
+    tdIcon.textContent = verified ? "" : "\u26A0\uFE0F";
+    tdIcon.title = verified
+      ? "Verified"
+      : "No saved location, or it does not match the current floor / area";
     const tdName = document.createElement("td");
     tdName.className = "name";
     tdName.textContent = r.name;
     const tdLoc = document.createElement("td");
     tdLoc.className = "location";
     tdLoc.textContent = r.location || "\u2014";
-    tr.append(tdName, tdLoc);
+    const tdVerify = document.createElement("td");
+    tdVerify.className = "verify";
+    const btn = document.createElement("button");
+    btn.textContent = "Verify";
+    btn.addEventListener("click", (e) => {
+      e.stopPropagation();
+      verifyDevice(r, btn);
+    });
+    tdVerify.appendChild(btn);
+    tr.append(tdIcon, tdName, tdLoc, tdVerify);
     $rows.appendChild(tr);
   }
   $table.hidden = rows.length === 0;
@@ -205,6 +224,27 @@ function openDevice(r) {
 function closeDevice() {
   $overlay.hidden = true;
   $overlay.classList.remove("open");
+}
+
+async function verifyDevice(r, btn) {
+  btn.disabled = true;
+  try {
+    const res = await fetch(BASE + "/api/devices/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id: r.id, floor: r.floor, area: r.area }),
+    });
+    if (!res.ok) {
+      const err = (await res.json().catch(() => ({}))).error;
+      throw new Error(err || `HTTP ${res.status}`);
+    }
+    r.verified_floor = r.floor;
+    r.verified_area = r.area;
+    render();
+  } catch (err) {
+    btn.disabled = false;
+    setStatus(`Failed to verify device: ${err.message}. <br>Check the add-on logs and try again.`, true);
+  }
 }
 
 $modalClose.onclick = closeDevice;

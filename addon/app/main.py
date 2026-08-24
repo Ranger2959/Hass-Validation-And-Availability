@@ -49,12 +49,43 @@ async def handle_api_devices(request):
     )
 
 
+async def handle_api_verify(request):
+    try:
+        body = await request.json()
+    except Exception:
+        body = {}
+    if not isinstance(body, dict):
+        body = {}
+    device_id = str(body.get("id") or "")
+    if not device_id:
+        return web.Response(
+            status=400,
+            text=json.dumps({"error": "Expected JSON body with id, floor and area"}),
+            content_type="application/json",
+        )
+    verified = ha_api.load_verified()
+    verified[device_id] = {
+        "floor": str(body.get("floor") or ""),
+        "area": str(body.get("area") or ""),
+    }
+    try:
+        ha_api.save_verified(verified)
+    except OSError as exc:
+        return web.Response(
+            status=500,
+            text=json.dumps({"error": "Could not save verification: " + str(exc)[:300]}),
+            content_type="application/json",
+        )
+    return web.Response(text=json.dumps({"ok": True}), content_type="application/json")
+
+
 def main():
     port = int(os.environ.get("INGRESS_PORT", "8099"))
     app = web.Application()
     app.router.add_get("/", handle_index)
     app.router.add_get("/icon.png", handle_icon)
     app.router.add_get("/api/devices", handle_api_devices)
+    app.router.add_post("/api/devices/verify", handle_api_verify)
     app.router.add_get("/{tail:.*}", handle_index)
     _LOGGER.info("Starting Device Board v%s on port %d", VERSION, port)
     web.run_app(app, host="0.0.0.0", port=port)
