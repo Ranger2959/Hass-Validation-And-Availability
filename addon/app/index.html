@@ -191,7 +191,12 @@ function openDevice(r) {
     $modalDetails.append(dt, dd);
   }
   $modalOpen.onclick = () => {
-    window.location.href = window.location.origin + "/config/devices/device/" + r.id;
+    const url = "/config/devices/device/" + r.id;
+    try {
+      window.top.location.href = url;
+    } catch {
+      window.open(url, "_blank");
+    }
   };
   $overlay.hidden = false;
   $overlay.classList.add("open");
