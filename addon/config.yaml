@@ -1,7 +1,7 @@
 name: Device Board
 description: Browse all Home Assistant devices with their floor and area
 url: https://github.com/chris/Hass-Validation-And-Availability
-version: "1.0.0"
+version: "1.1.0"
 slug: device_board
 init: false
 arch:
