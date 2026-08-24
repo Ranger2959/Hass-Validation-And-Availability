@@ -12,7 +12,7 @@ import os
 
 import aiohttp
 
-from ha_config import _HA_WS_URL, _token
+from ha_config import _HA_REST_URL, _HA_WS_URL, _token
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -100,6 +100,22 @@ async def _ws_call(command: str):
                 )
 
 
+async def _rest_states() -> list[dict]:
+    """Fetch all states via REST to resolve entity friendly names."""
+    try:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                _HA_REST_URL + "/api/states",
+                headers={"Authorization": f"Bearer {_token()}"},
+            ) as resp:
+                resp.raise_for_status()
+                data = await resp.json()
+        return data if isinstance(data, list) else []
+    except Exception as exc:
+        _LOGGER.warning("Could not fetch states for entity names: %s", exc)
+        return []
+
+
 VERIFIED_PATH = "/data/verified.json"
 
 
@@ -123,11 +139,12 @@ def save_verified(verified: dict[str, dict[str, str]]) -> None:
 
 async def get_device_board() -> list[dict]:
     """Fetch all devices joined with their area and floor."""
-    raw_devices, raw_areas, raw_floors, raw_entity_reg = await asyncio.gather(
+    raw_devices, raw_areas, raw_floors, raw_entity_reg, states = await asyncio.gather(
         _ws_call("config/device_registry/list"),
         _ws_call("config/area_registry/list"),
         _ws_call("config/floor_registry/list"),
         _ws_call("config/entity_registry/list"),
+        _rest_states(),
     )
     devices = _entries(raw_devices, "device", "id", "device_id")
 
@@ -143,6 +160,12 @@ async def get_device_board() -> list[dict]:
         dev_id = ent.get("device_id")
         if dev_id:
             entities_by_device.setdefault(dev_id, []).append(ent["id"])
+
+    friendly_names: dict[str, str] = {}
+    for st in states:
+        eid = st.get("entity_id")
+        if eid:
+            friendly_names[eid] = (st.get("attributes") or {}).get("friendly_name") or eid
 
     verified = load_verified()
 
@@ -170,7 +193,10 @@ async def get_device_board() -> list[dict]:
                 "location": location,
                 "verified_floor": saved.get("floor"),
                 "verified_area": saved.get("area"),
-                "entities": entities_by_device.get(dev["id"]) or [],
+                "entities": [
+                    {"id": eid, "name": friendly_names.get(eid, eid)}
+                    for eid in entities_by_device.get(dev["id"]) or []
+                ],
                 "verified_entity": saved.get("entity"),
             }
         )

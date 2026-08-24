@@ -242,8 +242,8 @@ function openDevice(r) {
   $modalEntity.appendChild(placeholder);
   for (const e of r.entities || []) {
     const opt = document.createElement("option");
-    opt.value = e;
-    opt.textContent = e;
+    opt.value = e.id;
+    opt.textContent = `${e.name} [${e.id}]`;
     $modalEntity.appendChild(opt);
   }
   $modalEntity.value = r.verified_entity || "";

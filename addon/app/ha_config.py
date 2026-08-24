@@ -17,6 +17,11 @@ if _BASE_URL:
 else:
     _HA_WS_URL = "ws://supervisor/core/websocket"
 
+if _BASE_URL:
+    _HA_REST_URL = _BASE_URL
+else:
+    _HA_REST_URL = "http://supervisor/core"
+
 
 def _token() -> str:
     """Return the auth token for the current mode."""
