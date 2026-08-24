@@ -1,0 +1,170 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Devices</title>
+<style>
+  :root {
+    --bg: #111318;
+    --card: #1b1f27;
+    --text: #eae3f5;
+    --muted: #9aa0b0;
+    --border: #2c313c;
+    --accent: #03a9f4;
+    --danger: #f44336;
+  }
+  @media (prefers-color-scheme: light) {
+    :root {
+      --bg: #f4f4f8;
+      --card: #ffffff;
+      --text: #212121;
+      --muted: #6b6b76;
+      --border: #e0e0e8;
+      --danger: #d32f2f;
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 24px 16px; }
+  .topbar { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0; }
+  .count {
+    font-size: 13px; color: var(--muted);
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 999px; padding: 3px 10px;
+  }
+  .spacer { flex: 1; }
+  input[type="search"] {
+    background: var(--card); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; font-size: 14px; min-width: 180px;
+  }
+  button {
+    background: var(--accent); color: #fff; border: none;
+    border-radius: 8px; padding: 8px 14px; font-size: 14px; cursor: pointer;
+  }
+  button:disabled { opacity: 0.5; cursor: default; }
+  .card { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; }
+  thead th {
+    text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: 0.4px; color: var(--muted);
+    padding: 10px 16px; border-bottom: 1px solid var(--border);
+    position: sticky; top: 0; background: var(--card);
+  }
+  tbody td { padding: 10px 16px; border-bottom: 1px solid var(--border); vertical-align: top; }
+  tbody tr:last-child td { border-bottom: none; }
+  tbody tr:hover { background: rgba(128, 128, 128, 0.08); }
+  td.name { font-weight: 600; }
+  td.location { color: var(--muted); white-space: nowrap; }
+  .status { padding: 24px 16px; color: var(--muted); text-align: center; font-size: 14px; }
+  .status.error { color: var(--danger); }
+  .spin {
+    display: inline-block; width: 14px; height: 14px; margin-right: 8px;
+    border: 2px solid var(--muted); border-top-color: transparent;
+    border-radius: 50%; animation: spin 0.8s linear infinite; vertical-align: -2px;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="topbar">
+    <h1>Devices</h1>
+    <span class="count" id="count" hidden></span>
+    <span class="spacer"></span>
+    <input type="search" id="filter" placeholder="Filter devices&hellip;" hidden>
+    <button id="refresh" disabled>Refresh</button>
+  </div>
+  <div class="card">
+    <div class="status" id="status"><span class="spin"></span>Loading devices&hellip;</div>
+    <table id="table" hidden>
+      <thead>
+        <tr><th>Device</th><th>Floor / Area</th></tr>
+      </thead>
+      <tbody id="rows"></tbody>
+    </table>
+  </div>
+</div>
+<script>
+const BASE = "{{BASE}}";
+
+const $rows = document.getElementById("rows");
+const $table = document.getElementById("table");
+const $status = document.getElementById("status");
+const $count = document.getElementById("count");
+const $filter = document.getElementById("filter");
+const $refresh = document.getElementById("refresh");
+
+let rows = [];
+
+function setStatus(html, isError) {
+  $status.innerHTML = html;
+  $status.classList.toggle("error", !!isError);
+  $status.hidden = false;
+}
+
+function render() {
+  const q = $filter.value.trim().toLowerCase();
+  const visible = q
+    ? rows.filter(r => (r.name + " " + r.location).toLowerCase().includes(q))
+    : rows;
+  $rows.textContent = "";
+  for (const r of visible) {
+    const tr = document.createElement("tr");
+    const tdName = document.createElement("td");
+    tdName.className = "name";
+    tdName.textContent = r.name;
+    const tdLoc = document.createElement("td");
+    tdLoc.className = "location";
+    tdLoc.textContent = r.location || "\u2014";
+    tr.append(tdName, tdLoc);
+    $rows.appendChild(tr);
+  }
+  $table.hidden = rows.length === 0;
+  if (rows.length === 0) {
+    setStatus(rows.length ? "No devices match your filter." : "No devices found in Home Assistant.");
+  } else if (q) {
+    $status.hidden = true;
+  } else {
+    $status.hidden = true;
+  }
+  $count.textContent = q ? `${visible.length} of ${rows.length}` : `${rows.length}`;
+  $count.hidden = false;
+}
+
+async function load() {
+  $refresh.disabled = true;
+  $filter.value = "";
+  setStatus('<span class="spin"></span>Loading devices&hellip;');
+  $table.hidden = true;
+  $count.hidden = true;
+  try {
+    const res = await fetch(BASE + "/api/devices");
+    if (!res.ok) {
+      const body = await res.json().catch(() => ({}));
+      throw new Error(body.error || `Request failed (${res.status})`);
+    }
+    rows = (await res.json()).devices;
+    render();
+  } catch (err) {
+    rows = [];
+    setStatus(`Failed to load devices: ${err.message}. <br>Check the add-on logs and try again.`, true);
+  } finally {
+    $refresh.disabled = false;
+    $filter.hidden = rows.length === 0;
+  }
+}
+
+$filter.addEventListener("input", render);
+$refresh.addEventListener("click", load);
+load();
+</script>
+</body>
+</html>
