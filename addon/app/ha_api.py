@@ -1,8 +1,8 @@
-"""HA data fetchers -- WebSocket access to the device/area/floor registries and config entries.
+"""HA data fetchers -- WebSocket access to the device/area/floor registries.
 
 Home Assistant does not expose its registries through the REST API (there are
 no /api/devices, /api/areas or /api/floors endpoints), so we use the WebSocket
-API (config/*_registry/list, config_entries/list) -- the same mechanism the HA frontend uses.
+API (config/*_registry/list) -- the same mechanism the HA frontend uses.
 """
 
 import asyncio
@@ -100,11 +100,10 @@ async def _ws_call(command: str):
 
 async def get_device_board() -> list[dict]:
     """Fetch all devices joined with their area and floor."""
-    raw_devices, raw_areas, raw_floors, raw_entries = await asyncio.gather(
+    raw_devices, raw_areas, raw_floors = await asyncio.gather(
         _ws_call("config/device_registry/list"),
         _ws_call("config/area_registry/list"),
         _ws_call("config/floor_registry/list"),
-        _ws_call("config_entries/get"),
     )
     devices = _entries(raw_devices, "device", "id", "device_id")
     
@@ -117,9 +116,6 @@ async def get_device_board() -> list[dict]:
     areas_by_id = {a["id"]: a for a in areas}
     floors_by_id = {f["id"]: f for f in floors}
 
-    entries = _entries(raw_entries, "config_entry", "entry_id", "id")
-    entry_domains_by_id = {e["id"]: e.get("domain") or "" for e in entries}
-
     rows = []
     for dev in devices:
         area = areas_by_id.get(dev.get("area_id") or "")
@@ -128,15 +124,6 @@ async def get_device_board() -> list[dict]:
             floor = floors_by_id.get(area["floor_id"])
 
         name = dev.get("name_by_user") or dev.get("name") or "Unnamed device"
-        entry_ids = dev.get("config_entries")
-        if isinstance(entry_ids, str):
-            entry_ids = [entry_ids]
-        elif not entry_ids:
-            entry_ids = [dev["config_entry_id"]] if dev.get("config_entry_id") else []
-        platform = next(
-            (entry_domains_by_id[c] for c in entry_ids if c in entry_domains_by_id),
-            "",
-        )
         floor_name = floor["name"] if floor else ""
         area_name = area["name"] if area else ""
         location = " / ".join(part for part in (floor_name, area_name) if part)
@@ -147,7 +134,6 @@ async def get_device_board() -> list[dict]:
                 "name": name,
                 "manufacturer": dev.get("manufacturer") or "",
                 "model": dev.get("model") or "",
-                "platform": platform,
                 "floor": floor_name,
                 "area": area_name,
                 "location": location,
