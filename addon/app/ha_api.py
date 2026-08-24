@@ -189,6 +189,7 @@ async def get_device_board() -> list[dict]:
         location = " / ".join(part for part in (floor_name, area_name) if part)
         saved = verified.get(dev["id"]) or {}
 
+
         rows.append(
             {
                 "id": dev["id"],
@@ -207,7 +208,7 @@ async def get_device_board() -> list[dict]:
                 "verified_entity": saved.get("entity"),
             }
         )
-
+    _LOGGER.info(rows)
     rows.sort(key=lambda r: (r["floor"] or "~", r["area"] or "~", r["name"].lower()))
     _LOGGER.info(
         "Fetched %d devices, %d areas, %d floors",
