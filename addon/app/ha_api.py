@@ -162,12 +162,13 @@ async def get_device_board() -> list[dict]:
     floors_by_id = {f["id"]: f for f in floors}
 
     entity_reg = _entries(raw_entity_reg, "entity", "entity_id", "id")
+    _LOGGER.info(entity_reg)
     entities_by_device: dict[str, list[str]] = {}
     for ent in entity_reg:
         dev_id = ent.get("device_id")
         if dev_id:
             entities_by_device.setdefault(dev_id, []).append(ent["id"])
-    _LOGGER.info(states);
+   
     friendly_names: dict[str, str] = {}
     for st in states:
         eid = st.get("entity_id")
