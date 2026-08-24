@@ -86,7 +86,7 @@
     <div class="status" id="status"><span class="spin"></span>Loading devices&hellip;</div>
     <table id="table" hidden>
       <thead>
-        <tr><th>Device</th><th>Floor / Area</th></tr>
+        <tr><th>Device</th><th>Integration</th><th>Floor / Area</th></tr>
       </thead>
       <tbody id="rows"></tbody>
     </table>
@@ -121,10 +121,13 @@ function render() {
     const tdName = document.createElement("td");
     tdName.className = "name";
     tdName.textContent = r.name;
+    const tdInt = document.createElement("td");
+    tdInt.className = "location";
+    tdInt.textContent = r.integration || "\u2014";
     const tdLoc = document.createElement("td");
     tdLoc.className = "location";
     tdLoc.textContent = r.location || "\u2014";
-    tr.append(tdName, tdLoc);
+    tr.append(tdName, tdInt, tdLoc);
     $rows.appendChild(tr);
   }
   $table.hidden = rows.length === 0;

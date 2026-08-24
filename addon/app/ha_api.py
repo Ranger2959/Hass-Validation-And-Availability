@@ -130,6 +130,7 @@ async def get_device_board() -> list[dict]:
                 "name": name,
                 "manufacturer": dev.get("manufacturer") or "",
                 "model": dev.get("model") or "",
+                "integration": dev.get("integration") or "",
                 "floor": floor_name,
                 "area": area_name,
                 "location": location,
