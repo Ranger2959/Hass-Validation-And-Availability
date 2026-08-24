@@ -106,6 +106,9 @@ async def get_device_board() -> list[dict]:
         _ws_call("config/floor_registry/list"),
     )
     devices = _entries(raw_devices, "device", "id", "device_id")
+    
+    _LOGGER.info(devices)
+
     areas = _entries(raw_areas, "area", "area_id", "id")
     floors = _entries(raw_floors, "floor", "floor_id", "id")
 
