@@ -1,0 +1,1 @@
+- Increment version in config.yaml with any changes made

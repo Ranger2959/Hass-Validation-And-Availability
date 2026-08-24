@@ -31,11 +31,16 @@ async def handle_icon(request):
 async def handle_api_devices(request):
     try:
         rows = await ha_api.get_device_board()
-    except Exception:
+    except Exception as exc:
         _LOGGER.exception("Failed to fetch device board from Home Assistant")
         return web.Response(
             status=502,
-            text=json.dumps({"error": "Could not reach Home Assistant"}),
+            text=json.dumps(
+                {
+                    "error": "Could not load devices from Home Assistant: "
+                    + str(exc)[:300]
+                }
+            ),
             content_type="application/json",
         )
     return web.Response(

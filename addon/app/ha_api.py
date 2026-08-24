@@ -15,6 +15,61 @@ from ha_config import _HA_WS_URL, _token
 _LOGGER = logging.getLogger(__name__)
 
 
+def _short(value, limit: int = 300) -> str:
+    """Return a compact, bounded repr for logging diagnostics."""
+    text = repr(value)
+    return text if len(text) <= limit else text[:limit] + "…"
+
+
+def _entries(value, label: str, *id_keys: str) -> list[dict]:
+    """Normalize a registry 'list' result into a list of dict entries.
+
+    Recent Home Assistant versions key registry entries by their
+    type-specific id field (e.g. area_id, floor_id) instead of a plain
+    "id" key; older versions use "id". The candidate keys are tried in
+    order and the resolved id is stored under "id" so callers can rely
+    on a single key. Unexpected shapes degrade to an empty/partial list
+    with a diagnostic log line instead of crashing the whole panel.
+    """
+    if value is None:
+        _LOGGER.warning("%s registry returned a null result", label)
+        return []
+    if not isinstance(value, list):
+        _LOGGER.warning(
+            "%s registry returned %s (expected a list): %s",
+            label,
+            type(value).__name__,
+            _short(value),
+        )
+        return []
+    entries = []
+    for entry in value:
+        if not isinstance(entry, dict):
+            if entry is not None:
+                _LOGGER.warning(
+                    "%s registry entry is not an object, skipping: %s",
+                    label,
+                    _short(entry),
+                )
+            continue
+        entry_id = None
+        for key in id_keys:
+            if entry.get(key):
+                entry_id = entry[key]
+                break
+        if entry_id:
+            entry.setdefault("id", entry_id)
+            entries.append(entry)
+        else:
+            _LOGGER.warning(
+                "%s registry entry has no id (%s), skipping: %s",
+                label,
+                ", ".join(id_keys),
+                _short(entry),
+            )
+    return entries
+
+
 async def _ws_call(command: str):
     """Open one WebSocket connection, authenticate, and run a single command."""
     token = _token()
@@ -22,11 +77,15 @@ async def _ws_call(command: str):
         async with session.ws_connect(_HA_WS_URL, heartbeat=30) as ws:
             msg = await ws.receive_json()
             if msg.get("type") != "auth_required":
-                raise RuntimeError(f"Unexpected first WebSocket message: {msg}")
+                raise RuntimeError(
+                    f"Unexpected first WebSocket message: {_short(msg)}"
+                )
             await ws.send_json({"type": "auth", "access_token": token})
             msg = await ws.receive_json()
             if msg.get("type") != "auth_ok":
-                raise RuntimeError(f"WebSocket authentication failed: {msg}")
+                raise RuntimeError(
+                    f"WebSocket authentication failed: {_short(msg)}"
+                )
             await ws.send_json({"id": 1, "type": command})
             while True:
                 msg = await ws.receive_json()
@@ -34,16 +93,21 @@ async def _ws_call(command: str):
                     continue  # ignore events / pongs
                 if msg.get("type") == "result":
                     return msg.get("result")
-                raise RuntimeError(f"Home Assistant error: {msg.get('message')}")
+                raise RuntimeError(
+                    f"Home Assistant error: {msg.get('message')} ({msg.get('code')})"
+                )
 
 
 async def get_device_board() -> list[dict]:
     """Fetch all devices joined with their area and floor."""
-    devices, areas, floors = await asyncio.gather(
+    raw_devices, raw_areas, raw_floors = await asyncio.gather(
         _ws_call("config/device_registry/list"),
         _ws_call("config/area_registry/list"),
         _ws_call("config/floor_registry/list"),
     )
+    devices = _entries(raw_devices, "device", "id", "device_id")
+    areas = _entries(raw_areas, "area", "area_id", "id")
+    floors = _entries(raw_floors, "floor", "floor_id", "id")
 
     areas_by_id = {a["id"]: a for a in areas}
     floors_by_id = {f["id"]: f for f in floors}
