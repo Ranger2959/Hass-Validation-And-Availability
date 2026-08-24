@@ -17,10 +17,11 @@ if _BASE_URL:
 else:
     _HA_WS_URL = "ws://supervisor/core/websocket"
 
+# The supervisor core proxy prepends /api, so its paths omit it.
 if _BASE_URL:
-    _HA_REST_URL = _BASE_URL
+    _HA_STATES_URL = _BASE_URL + "/api/states"
 else:
-    _HA_REST_URL = "http://supervisor/core"
+    _HA_STATES_URL = "http://supervisor/core/states"
 
 
 def _token() -> str:

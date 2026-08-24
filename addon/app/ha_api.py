@@ -12,7 +12,7 @@ import os
 
 import aiohttp
 
-from ha_config import _HA_REST_URL, _HA_WS_URL, _token
+from ha_config import _HA_STATES_URL, _HA_WS_URL, _token
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -105,10 +105,17 @@ async def _rest_states() -> list[dict]:
     try:
         async with aiohttp.ClientSession() as session:
             async with session.get(
-                _HA_REST_URL + "/api/states",
+                _HA_STATES_URL,
                 headers={"Authorization": f"Bearer {_token()}"},
             ) as resp:
-                resp.raise_for_status()
+                if resp.status != 200:
+                    body = (await resp.text())[:200]
+                    _LOGGER.warning(
+                        "States request failed with HTTP %d: %s",
+                        resp.status,
+                        body,
+                    )
+                    return []
                 data = await resp.json()
         return data if isinstance(data, list) else []
     except Exception as exc:
