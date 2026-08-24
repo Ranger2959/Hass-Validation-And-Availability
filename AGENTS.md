@@ -1,2 +1,1 @@
 - Increment version in config.yaml with any changes made
-- Add a commit message and commit all code to github on my behalf
