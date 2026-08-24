@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Devices</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <style>
   :root {
     --bg: #111318;
@@ -63,7 +64,10 @@
   tbody tr:hover { background: rgba(128, 128, 128, 0.08); }
   td.name { font-weight: 600; }
   td.location { color: var(--muted); white-space: nowrap; }
+  td.check { width: 28px; text-align: center; }
+  td.check input { cursor: pointer; }
   td.icon { width: 28px; text-align: center; }
+  td.icon i { color: var(--danger); }
   th.verify, td.verify { text-align: right; }
   td.verify button { padding: 4px 10px; font-size: 12px; }
   .status { padding: 24px 16px; color: var(--muted); text-align: center; font-size: 14px; }
@@ -109,7 +113,7 @@
     <div class="status" id="status"><span class="spin"></span>Loading devices&hellip;</div>
     <table id="table" hidden>
       <thead>
-        <tr><th></th><th>Device</th><th>Floor / Area</th><th class="verify">Verify</th></tr>
+        <tr><th></th><th></th><th>Device</th><th>Floor / Area</th><th class="verify">Verify</th></tr>
       </thead>
       <tbody id="rows"></tbody>
     </table>
@@ -117,7 +121,7 @@
 </div>
 <div class="overlay" id="overlay" hidden>
   <div class="modal" role="dialog" aria-modal="true">
-    <button class="close" id="modalClose" aria-label="Close">&times;</button>
+    <button class="close" id="modalClose" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
     <h2 id="modalName"></h2>
     <dl id="modalDetails"></dl>
     <button id="modalOpen">Open in Home Assistant</button>
@@ -157,9 +161,14 @@ function render() {
     tr.className = "device";
     tr.addEventListener("click", () => openDevice(r));
     const verified = r.verified_floor === r.floor && r.verified_area === r.area;
+    const tdCheck = document.createElement("td");
+    tdCheck.className = "check";
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    tdCheck.appendChild(cb);
     const tdIcon = document.createElement("td");
     tdIcon.className = "icon";
-    tdIcon.textContent = verified ? "" : "\u26A0\uFE0F";
+    tdIcon.innerHTML = verified ? "" : '<i class="fa-solid fa-triangle-exclamation"></i>';
     tdIcon.title = verified
       ? "Verified"
       : "No saved location, or it does not match the current floor / area";
@@ -171,14 +180,16 @@ function render() {
     tdLoc.textContent = r.location || "\u2014";
     const tdVerify = document.createElement("td");
     tdVerify.className = "verify";
-    const btn = document.createElement("button");
-    btn.textContent = "Verify";
-    btn.addEventListener("click", (e) => {
-      e.stopPropagation();
-      verifyDevice(r, btn);
-    });
-    tdVerify.appendChild(btn);
-    tr.append(tdIcon, tdName, tdLoc, tdVerify);
+    if (!verified && (r.floor || r.area)) {
+      const btn = document.createElement("button");
+      btn.textContent = "Verify";
+      btn.addEventListener("click", (e) => {
+        e.stopPropagation();
+        verifyDevice(r, btn);
+      });
+      tdVerify.appendChild(btn);
+    }
+    tr.append(tdCheck, tdIcon, tdName, tdLoc, tdVerify);
     $rows.appendChild(tr);
   }
   $table.hidden = rows.length === 0;
