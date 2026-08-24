@@ -104,7 +104,7 @@ async def get_device_board() -> list[dict]:
         _ws_call("config/device_registry/list"),
         _ws_call("config/area_registry/list"),
         _ws_call("config/floor_registry/list"),
-        _ws_call("config_entries/list"),
+        _ws_call("config_entries/get"),
     )
     devices = _entries(raw_devices, "device", "id", "device_id")
     
