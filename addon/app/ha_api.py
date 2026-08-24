@@ -149,6 +149,7 @@ async def get_device_board() -> list[dict]:
         floor_name = floor["name"] if floor else ""
         area_name = area["name"] if area else ""
         location = " / ".join(part for part in (floor_name, area_name) if part)
+        saved = verified.get(dev["id"]) or {}
 
         rows.append(
             {
@@ -159,8 +160,10 @@ async def get_device_board() -> list[dict]:
                 "floor": floor_name,
                 "area": area_name,
                 "location": location,
-                "verified_floor": (verified.get(dev["id"]) or {}).get("floor"),
-                "verified_area": (verified.get(dev["id"]) or {}).get("area"),
+                "verified_floor": saved.get("floor"),
+                "verified_area": saved.get("area"),
+                "entities": dev.get("entity_ids") or [],
+                "verified_entity": saved.get("entity"),
             }
         )
 

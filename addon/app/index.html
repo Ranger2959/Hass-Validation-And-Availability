@@ -64,10 +64,10 @@
   tbody tr:hover { background: rgba(128, 128, 128, 0.08); }
   td.name { font-weight: 600; }
   td.location { color: var(--muted); white-space: nowrap; }
-  td.check { width: 28px; text-align: center; }
-  td.check input { cursor: pointer; }
   td.icon { width: 28px; text-align: center; }
   td.icon i { color: var(--danger); }
+  td.entity { width: 28px; text-align: center; }
+  td.entity i { color: var(--muted); }
   th.verify, td.verify { text-align: right; }
   td.verify button { padding: 4px 10px; font-size: 12px; }
   .status { padding: 24px 16px; color: var(--muted); text-align: center; font-size: 14px; }
@@ -98,6 +98,13 @@
   .modal dl { margin: 0 0 16px; display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; }
   .modal dt { color: var(--muted); font-size: 13px; }
   .modal dd { margin: 0; color: var(--text); font-size: 14px; overflow-wrap: anywhere; }
+  .field { display: flex; flex-direction: column; gap: 6px; margin-bottom: 16px; }
+  .field-label { color: var(--muted); font-size: 13px; }
+  .modal select {
+    background: var(--card); color: var(--text);
+    border: 1px solid var(--border); border-radius: 8px;
+    padding: 8px 12px; font-size: 14px; width: 100%;
+  }
 </style>
 </head>
 <body>
@@ -124,6 +131,10 @@
     <button class="close" id="modalClose" aria-label="Close"><i class="fa-solid fa-xmark"></i></button>
     <h2 id="modalName"></h2>
     <dl id="modalDetails"></dl>
+    <label class="field">
+      <span class="field-label">Entity</span>
+      <select id="modalEntity"><option value="" selected>Select entity&hellip;</option></select>
+    </label>
     <button id="modalOpen">Open in Home Assistant</button>
   </div>
 </div>
@@ -141,6 +152,8 @@ const $modalName = document.getElementById("modalName");
 const $modalDetails = document.getElementById("modalDetails");
 const $modalOpen = document.getElementById("modalOpen");
 const $modalClose = document.getElementById("modalClose");
+const $modalEntity = document.getElementById("modalEntity");
+let $modalDevice = null;
 
 let rows = [];
 
@@ -161,17 +174,18 @@ function render() {
     tr.className = "device";
     tr.addEventListener("click", () => openDevice(r));
     const verified = r.verified_floor === r.floor && r.verified_area === r.area;
-    const tdCheck = document.createElement("td");
-    tdCheck.className = "check";
-    const cb = document.createElement("input");
-    cb.type = "checkbox";
-    tdCheck.appendChild(cb);
     const tdIcon = document.createElement("td");
     tdIcon.className = "icon";
     tdIcon.innerHTML = verified ? "" : '<i class="fa-solid fa-triangle-exclamation"></i>';
     tdIcon.title = verified
       ? "Verified"
       : "No saved location, or it does not match the current floor / area";
+    const tdEntity = document.createElement("td");
+    tdEntity.className = "entity";
+    if (r.verified_entity) {
+      tdEntity.innerHTML = '<i class="fa-solid fa-tag"></i>';
+      tdEntity.title = r.verified_entity;
+    }
     const tdName = document.createElement("td");
     tdName.className = "name";
     tdName.textContent = r.name;
@@ -189,7 +203,7 @@ function render() {
       });
       tdVerify.appendChild(btn);
     }
-    tr.append(tdCheck, tdIcon, tdName, tdLoc, tdVerify);
+    tr.append(tdIcon, tdEntity, tdName, tdLoc, tdVerify);
     $rows.appendChild(tr);
   }
   $table.hidden = rows.length === 0;
@@ -220,6 +234,19 @@ function openDevice(r) {
     dd.textContent = value;
     $modalDetails.append(dt, dd);
   }
+  $modalDevice = r;
+  $modalEntity.textContent = "";
+  const placeholder = document.createElement("option");
+  placeholder.value = "";
+  placeholder.textContent = "Select entity\u2026";
+  $modalEntity.appendChild(placeholder);
+  for (const e of r.entities || []) {
+    const opt = document.createElement("option");
+    opt.value = e;
+    opt.textContent = e;
+    $modalEntity.appendChild(opt);
+  }
+  $modalEntity.value = r.verified_entity || "";
   $modalOpen.onclick = () => {
     const url = "/config/devices/device/" + r.id;
     try {
@@ -237,18 +264,22 @@ function closeDevice() {
   $overlay.classList.remove("open");
 }
 
+async function postVerify(payload) {
+  const res = await fetch(BASE + "/api/devices/verify", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(payload),
+  });
+  if (!res.ok) {
+    const err = (await res.json().catch(() => ({}))).error;
+    throw new Error(err || `HTTP ${res.status}`);
+  }
+}
+
 async function verifyDevice(r, btn) {
   btn.disabled = true;
   try {
-    const res = await fetch(BASE + "/api/devices/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id: r.id, floor: r.floor, area: r.area }),
-    });
-    if (!res.ok) {
-      const err = (await res.json().catch(() => ({}))).error;
-      throw new Error(err || `HTTP ${res.status}`);
-    }
+    await postVerify({ id: r.id, floor: r.floor, area: r.area });
     r.verified_floor = r.floor;
     r.verified_area = r.area;
     render();
@@ -261,6 +292,15 @@ async function verifyDevice(r, btn) {
 $modalClose.onclick = closeDevice;
 $overlay.addEventListener("click", (e) => { if (e.target === $overlay) closeDevice(); });
 document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !$overlay.hidden) closeDevice(); });
+$modalEntity.addEventListener("change", () => {
+  const r = $modalDevice;
+  if (!r) return;
+  r.verified_entity = $modalEntity.value || null;
+  render();
+  postVerify({ id: r.id, entity: $modalEntity.value }).catch((err) => {
+    setStatus(`Failed to save entity: ${err.message}. <br>Check the add-on logs and try again.`, true);
+  });
+});
 
 async function load() {
   $refresh.disabled = true;

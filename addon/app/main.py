@@ -64,10 +64,11 @@ async def handle_api_verify(request):
             content_type="application/json",
         )
     verified = ha_api.load_verified()
-    verified[device_id] = {
-        "floor": str(body.get("floor") or ""),
-        "area": str(body.get("area") or ""),
-    }
+    entry = verified.get(device_id) or {}
+    for key in ("floor", "area", "entity"):
+        if key in body:
+            entry[key] = str(body.get(key) or "")
+    verified[device_id] = entry
     try:
         ha_api.save_verified(verified)
     except OSError as exc:
