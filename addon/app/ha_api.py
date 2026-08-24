@@ -167,7 +167,7 @@ async def get_device_board() -> list[dict]:
         dev_id = ent.get("device_id")
         if dev_id:
             entities_by_device.setdefault(dev_id, []).append(ent["id"])
-
+    _LOGGER.info(states);
     friendly_names: dict[str, str] = {}
     for st in states:
         eid = st.get("entity_id")
@@ -208,7 +208,7 @@ async def get_device_board() -> list[dict]:
                 "verified_entity": saved.get("entity"),
             }
         )
-    _LOGGER.info(rows)
+        
     rows.sort(key=lambda r: (r["floor"] or "~", r["area"] or "~", r["name"].lower()))
     _LOGGER.info(
         "Fetched %d devices, %d areas, %d floors",
