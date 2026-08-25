@@ -1,6 +1,6 @@
-"""Home Assistant device registry models."""
+"""Home Assistant registry models."""
 
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class HomeAssistantError(Exception):
@@ -31,3 +31,30 @@ class HassDevice(BaseModel):
 class Device(BaseModel):
     id: str
     name: str
+    area_name: str | None = None
+    floor_name: str | None = None
+
+
+class HassArea(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    area_id: str = Field(alias="id")
+    name: str
+    normalized_name: str
+    floor_id: str | None = None
+    icon: str | None = None
+    picture: str | None = None
+    aliases: list[str] = []
+    labels: list[str] = []
+    humidity_entity_id: str | None = None
+    temperature_entity_id: str | None = None
+
+
+class HassFloor(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    floor_id: str = Field(alias="id")
+    name: str
+    icon: str | None = None
+    level: int | None = None
+    aliases: list[str] = []
