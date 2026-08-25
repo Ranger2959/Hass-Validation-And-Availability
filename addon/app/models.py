@@ -34,6 +34,7 @@ class Device(BaseModel):
     area_name: str | None = None
     floor_name: str | None = None
     integration_name: str | None = None
+    is_ignored: bool = False
 
 
 class HassArea(BaseModel):
@@ -67,6 +68,14 @@ class HassConfigEntry(BaseModel):
     title: str | None = None
     source: str | None = None
     state: str | None = None
+
+
+class AppData(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    ignored_devices: list[str] = Field(
+        default_factory=list, alias="ignoredDevices"
+    )
 
 
 class HassManifest(BaseModel):
