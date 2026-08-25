@@ -73,14 +73,14 @@ async def get_config_entries() -> list[HassConfigEntry]:
     result = await _send_command(
         {"id": 4, "type": "config_entries/get"}
     )
-    _LOGGER.info(result)
-    return [HassConfigEntry.model_validate(e) for e in result.get("entries", [])]
+    return [HassConfigEntry.model_validate(e) for e in result]
 
 
 async def get_devices_with_location() -> list[Device]:
     devices, areas, floors, entries = await asyncio.gather(
         get_hass_devices(), get_areas(), get_floors(), get_config_entries()
     )
+    _LOGGER.info(entries)
     area_by_id = {area.area_id: area for area in areas}
     floor_by_id = {floor.floor_id: floor for floor in floors}
     entry_by_id = {entry.entry_id: entry for entry in entries}
