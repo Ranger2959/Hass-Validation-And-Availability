@@ -33,6 +33,8 @@ class Device(BaseModel):
     name: str
     area_name: str | None = None
     floor_name: str | None = None
+    integration_domain: str | None = None
+    integration_title: str | None = None
 
 
 class HassArea(BaseModel):
@@ -58,3 +60,11 @@ class HassFloor(BaseModel):
     icon: str | None = None
     level: int | None = None
     aliases: list[str] = []
+
+
+class HassConfigEntry(BaseModel):
+    entry_id: str
+    domain: str
+    title: str | None = None
+    source: str | None = None
+    state: str | None = None

@@ -11,6 +11,7 @@ import ha_config
 from models import (
     Device,
     HassArea,
+    HassConfigEntry,
     HassDevice,
     HassFloor,
     HomeAssistantError,
@@ -68,12 +69,20 @@ async def get_floors() -> list[HassFloor]:
     return [HassFloor.model_validate(d) for d in result]
 
 
+async def get_config_entries() -> list[HassConfigEntry]:
+    result = await _send_command(
+        {"id": 4, "type": "config_entries/get"}
+    )
+    return [HassConfigEntry.model_validate(e) for e in result.get("entries", [])]
+
+
 async def get_devices_with_location() -> list[Device]:
-    devices, areas, floors = await asyncio.gather(
-        get_hass_devices(), get_areas(), get_floors()
+    devices, areas, floors, entries = await asyncio.gather(
+        get_hass_devices(), get_areas(), get_floors(), get_config_entries()
     )
     area_by_id = {area.area_id: area for area in areas}
     floor_by_id = {floor.floor_id: floor for floor in floors}
+    entry_by_id = {entry.entry_id: entry for entry in entries}
     result = []
     for device in devices:
         area = area_by_id.get(device.area_id) if device.area_id else None
@@ -82,12 +91,21 @@ async def get_devices_with_location() -> list[Device]:
             if area and area.floor_id
             else None
         )
+        integrations = [
+            entry_by_id[entry_id]
+            for entry_id in device.config_entries
+            if entry_id in entry_by_id
+        ]
+        domains = [i.domain for i in integrations]
+        titles = [i.title for i in integrations if i.title]
         result.append(
             Device(
                 id=device.id,
                 name=device.name_by_user or device.name or "Unnamed device",
                 area_name=area.name if area else "Unassigned",
                 floor_name=floor.name if floor else "Unassigned",
+                integration_domain=", ".join(domains) if domains else "Unknown",
+                integration_title=", ".join(titles) if titles else "Unknown",
             )
         )
     return result
