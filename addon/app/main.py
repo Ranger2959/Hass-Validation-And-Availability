@@ -1,36 +1,50 @@
-"""Device Board -- aiohttp panel server for Home Assistant."""
+"""Device Board -- FastAPI panel server for Home Assistant."""
 
-import json
 import logging
 import os
-
-from aiohttp import web
-
+import uvicorn
+from fastapi import APIRouter, FastAPI, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse
 import ha_api
+import models
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
 _LOGGER = logging.getLogger(__name__)
 
+_INDEX_PATH = "/app/index.html"
+_ICON_PATH = "/app/icon.png"
 
-async def handle_index(request):
+@api_router.get("/devices")
+async def list_devices() -> list[models.Device]:
+    try:
+        return await ha_api.get_devices()
+    except Exception as exc:
+        _LOGGER.error("Failed to fetch devices from Home Assistant: %s", exc)
+        raise HTTPException(status_code=502, detail=f"Home Assistant request failed: {exc}")
+
+api_router = APIRouter(prefix="/api")
+app = FastAPI()
+app.include_router(api_router)
+
+
+@app.get("/icon.png")
+async def handle_icon() -> FileResponse:
+    return FileResponse(_ICON_PATH)
+
+
+@app.get("/{tail:path}")
+@app.get("/")
+async def _serve_index(request: Request) -> HTMLResponse:
     ingress_path = request.headers.get("X-Ingress-Path", "").rstrip("/")
-    with open("/app/index.html", "r") as f:
+    with open(_INDEX_PATH, "r") as f:
         html = f.read()
-    return web.Response(text=html.replace("{{BASE}}", ingress_path), content_type="text/html")
+    return HTMLResponse(html.replace("{{BASE}}", ingress_path))
 
 
-async def handle_icon(request):
-    return web.FileResponse("/app/icon.png")
-
-
-def main():
+def main() -> None:
     port = int(os.environ.get("INGRESS_PORT", "8099"))
-    app = web.Application()
-    app.router.add_get("/", handle_index)
-    app.router.add_get("/icon.png", handle_icon)
-    app.router.add_get("/{tail:.*}", handle_index)
     _LOGGER.info("Starting Device Board on port %d", port)
-    web.run_app(app, host="0.0.0.0", port=port)
+    uvicorn.run(app, host="0.0.0.0", port=port)
 
 
 if __name__ == "__main__":
