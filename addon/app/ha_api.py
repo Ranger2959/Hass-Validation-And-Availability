@@ -79,8 +79,16 @@ async def get_config_entries() -> list[HassConfigEntry]:
 
 async def get_integration_names() -> dict[str, HassManifest]:
     result = await _send_command({"id": 5, "type": "manifest/list"})
+    _LOGGER.info(result)
     manifests: dict[str, HassManifest] = {}
-    for domain, manifest in result.items():
+    items = (
+        result.items()
+        if isinstance(result, dict)
+        else ((m.get("domain"), m) for m in result)
+    )
+    for domain, manifest in items:
+        if not domain:
+            continue
         try:
             manifests[domain] = HassManifest.model_validate(
                 {**manifest, "domain": domain}
