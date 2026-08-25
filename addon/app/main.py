@@ -14,6 +14,8 @@ _LOGGER = logging.getLogger(__name__)
 _INDEX_PATH = "/app/index.html"
 _ICON_PATH = "/app/icon.png"
 
+api_router = APIRouter(prefix="/api")
+
 @api_router.get("/devices")
 async def list_devices() -> list[models.Device]:
     try:
@@ -22,15 +24,12 @@ async def list_devices() -> list[models.Device]:
         _LOGGER.error("Failed to fetch devices from Home Assistant: %s", exc)
         raise HTTPException(status_code=502, detail=f"Home Assistant request failed: {exc}")
 
-api_router = APIRouter(prefix="/api")
 app = FastAPI()
 app.include_router(api_router)
-
 
 @app.get("/icon.png")
 async def handle_icon() -> FileResponse:
     return FileResponse(_ICON_PATH)
-
 
 @app.get("/{tail:path}")
 @app.get("/")
@@ -40,12 +39,10 @@ async def _serve_index(request: Request) -> HTMLResponse:
         html = f.read()
     return HTMLResponse(html.replace("{{BASE}}", ingress_path))
 
-
 def main() -> None:
     port = int(os.environ.get("INGRESS_PORT", "8099"))
     _LOGGER.info("Starting Device Board on port %d", port)
     uvicorn.run(app, host="0.0.0.0", port=port)
-
 
 if __name__ == "__main__":
     main()
