@@ -23,8 +23,8 @@ class HassDevice(BaseModel):
     disabled_by: str | None = None
     configuration_url: str | None = None
     config_entries: list[str] = []
-    identifiers: list[list[str]] = []
-    connections: list[list[str]] = []
+    identifiers: list[list[str | int]] = []
+    connections: list[list[str | int]] = []
     labels: list[str] = []
 
 
