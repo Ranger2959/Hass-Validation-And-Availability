@@ -24,6 +24,11 @@ async def list_devices() -> list[models.Device]:
         _LOGGER.error("Failed to fetch devices from Home Assistant: %s", exc)
         raise HTTPException(status_code=502, detail=f"Home Assistant request failed: {exc}")
 
+
+@api_router.post("/devices/{device_id}/ignore")
+async def ignore_device(device_id: str) -> dict:
+    return {"ignoredDevices": ha_api.ignore_device(device_id)}
+
 app = FastAPI()
 app.include_router(api_router)
 

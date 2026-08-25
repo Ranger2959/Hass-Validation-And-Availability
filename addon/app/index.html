@@ -38,7 +38,7 @@
         </tbody>
       </table>
     </div>
-    <device-modal v-if="selected" :device="selected" @close="selected = null" />
+    <device-modal v-if="selected" :device="selected" @close="selected = null" @ignore="onIgnore" />
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
@@ -49,7 +49,7 @@
       props: {
         device: { type: Object, required: true },
       },
-      emits: ["close"],
+      emits: ["close", "ignore"],
       setup(props, { emit }) {
         const onKeydown = (e) => {
           if (e.key === "Escape") emit("close");
@@ -62,26 +62,29 @@
           <div class="w-full max-w-md rounded-lg bg-white shadow-xl" @click.stop>
             <div class="flex items-center justify-between border-b border-gray-200 px-5 py-4">
               <h2 class="text-lg font-semibold">{{ device.name }}</h2>
-            <button class="text-xl leading-none text-gray-400 hover:text-gray-600" @click="$emit('close')" aria-label="Close">&times;</button>
-          </div>
+              <button class="text-xl leading-none text-gray-400 hover:text-gray-600" @click="$emit('close')" aria-label="Close">&times;</button>
+            </div>
             <dl class="px-5 py-4">
               <div class="flex justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
-              <dt class="shrink-0 text-gray-500">Device ID</dt>
-            <dd class="break-all text-right font-medium">{{ device.id }}</dd>
-          </div>
-            <div class="flex justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
-            <dt class="shrink-0 text-gray-500">Integration</dt>
-            <dd class="break-all text-right font-medium">{{ device.integration_name }}</dd>
-          </div>
-            <div class="flex justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
-              <dt class="shrink-0 text-gray-500">Floor</dt>
-              <dd class="break-all text-right font-medium">{{ device.floor_name }}</dd>
-        </div>
-        <div class="flex justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
-            <dt class="shrink-0 text-gray-500">Area</dt>
-            <dd class="break-all text-right font-medium">{{ device.area_name }}</dd>
-        </div>
-        </dl>
+                <dt class="shrink-0 text-gray-500">Device ID</dt>
+                <dd class="break-all text-right font-medium">{{ device.id }}</dd>
+              </div>
+              <div class="flex justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
+                <dt class="shrink-0 text-gray-500">Integration</dt>
+                <dd class="break-all text-right font-medium">{{ device.integration_name }}</dd>
+              </div>
+              <div class="flex justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
+                <dt class="shrink-0 text-gray-500">Floor</dt>
+                <dd class="break-all text-right font-medium">{{ device.floor_name }}</dd>
+              </div>
+              <div class="flex justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
+                <dt class="shrink-0 text-gray-500">Area</dt>
+                <dd class="break-all text-right font-medium">{{ device.area_name }}</dd>
+              </div>
+            </dl>
+            <div class="flex justify-end border-t border-gray-200 px-5 py-4">
+              <button class="rounded-md bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-500" @click="$emit('ignore')">Ignore</button>
+            </div>
           </div>
         </div>
       `,
@@ -97,12 +100,14 @@
 
         onMounted(async () => {
           try {
-            const res = await fetch("{{BASE}}/api/devices");
-            if (!res.ok) {
-              const data = await res.json().catch(() => null);
-              throw new Error(data?.detail || `Request failed (${res.status})`);
+            const devRes = await fetch("{{BASE}}/api/devices");
+            if (!devRes.ok) {
+              const data = await devRes.json().catch(() => null);
+              throw new Error(data?.detail || `Request failed (${devRes.status})`);
             }
-            devices.value = await res.json();
+            devices.value = (await devRes.json()).filter(
+              (d) => !d.is_ignored
+            );
           } catch (err) {
             error.value = err.message || "Failed to load devices";
           } finally {
@@ -110,7 +115,21 @@
           }
         });
 
-        return { devices, loading, error, selected };
+        const onIgnore = async () => {
+          const device = selected.value;
+          const res = await fetch(
+            `{{BASE}}/api/devices/${device.id}/ignore`,
+            { method: "POST" }
+          );
+          if (!res.ok) {
+            error.value = "Failed to ignore device";
+            return;
+          }
+          devices.value = devices.value.filter((d) => d.id !== device.id);
+          selected.value = null;
+        };
+
+        return { devices, loading, error, selected, onIgnore };
       },
     }).mount("#app");
   </script>

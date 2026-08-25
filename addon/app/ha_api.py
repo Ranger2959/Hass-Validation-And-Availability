@@ -3,12 +3,15 @@
 import asyncio
 import json
 import logging
+import os
 from typing import Any
 
 import websockets
 
 import ha_config
+from ha_data import ignore_device
 from models import (
+    AppData,
     Device,
     HassManifest,
     HassArea,
@@ -97,6 +100,7 @@ async def get_devices_with_location() -> list[Device]:
     floor_by_id = {floor.floor_id: floor for floor in floors}
     entry_by_id = {entry.entry_id: entry for entry in entries}
     manifest_by_domain = {m.domain: m for m in manifests}
+    ignored_ids = set(_load_data().ignored_devices)
     result = []
     for device in devices:
         area = area_by_id.get(device.area_id) if device.area_id else None
@@ -124,6 +128,7 @@ async def get_devices_with_location() -> list[Device]:
                     if manifest
                     else domain or "Unknown"
                 ),
+                is_ignored=device.id in ignored_ids,
             )
         )
     return result
