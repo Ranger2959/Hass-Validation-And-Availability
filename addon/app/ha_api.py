@@ -10,6 +10,7 @@ import websockets
 import ha_config
 from models import (
     Device,
+    HassManifest,
     HassArea,
     HassConfigEntry,
     HassDevice,
@@ -76,9 +77,28 @@ async def get_config_entries() -> list[HassConfigEntry]:
     return [HassConfigEntry.model_validate(e) for e in result]
 
 
+async def get_integration_names() -> dict[str, HassManifest]:
+    result = await _send_command({"id": 5, "type": "manifest/list"})
+    manifests: dict[str, HassManifest] = {}
+    for domain, manifest in result.items():
+        try:
+            manifests[domain] = HassManifest.model_validate(
+                {**manifest, "domain": domain}
+            )
+        except Exception:
+            _LOGGER.warning(
+                "Skipping unparseable manifest for domain %s", domain
+            )
+    return manifests
+
+
 async def get_devices_with_location() -> list[Device]:
-    devices, areas, floors, entries = await asyncio.gather(
-        get_hass_devices(), get_areas(), get_floors(), get_config_entries()
+    devices, areas, floors, entries, manifests = await asyncio.gather(
+        get_hass_devices(),
+        get_areas(),
+        get_floors(),
+        get_config_entries(),
+        get_integration_names(),
     )
     _LOGGER.info(entries)
     area_by_id = {area.area_id: area for area in areas}
@@ -92,21 +112,25 @@ async def get_devices_with_location() -> list[Device]:
             if area and area.floor_id
             else None
         )
-        integrations = [
-            entry_by_id[entry_id]
-            for entry_id in device.config_entries
-            if entry_id in entry_by_id
-        ]
-        domains = [i.domain for i in integrations]
-        titles = [i.title for i in integrations if i.title]
+        entry = (
+            entry_by_id[device.config_entries[0]]
+            if device.config_entries
+            and device.config_entries[0] in entry_by_id
+            else None
+        )
+        domain = entry.domain if entry else None
+        manifest = manifests.get(domain) if domain else None
         result.append(
             Device(
                 id=device.id,
                 name=device.name_by_user or device.name or "Unnamed device",
                 area_name=area.name if area else "Unassigned",
                 floor_name=floor.name if floor else "Unassigned",
-                integration_domain=", ".join(domains) if domains else "Unknown",
-                integration_title=", ".join(titles) if titles else "Unknown",
+                integration_name=(
+                    manifest.name
+                    if manifest
+                    else domain or "Unknown"
+                ),
             )
         )
     return result

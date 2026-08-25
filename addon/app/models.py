@@ -33,8 +33,7 @@ class Device(BaseModel):
     name: str
     area_name: str | None = None
     floor_name: str | None = None
-    integration_domain: str | None = None
-    integration_title: str | None = None
+    integration_name: str | None = None
 
 
 class HassArea(BaseModel):
@@ -68,3 +67,11 @@ class HassConfigEntry(BaseModel):
     title: str | None = None
     source: str | None = None
     state: str | None = None
+
+
+class HassManifest(BaseModel):
+    domain: str
+    name: str
+    integration_type: str | None = None
+    iot_class: str | None = None
+    documentation: str | None = None
