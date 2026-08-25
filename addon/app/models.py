@@ -72,6 +72,9 @@ class HassConfigEntry(BaseModel):
 class HassManifest(BaseModel):
     domain: str
     name: str
-    integration_type: str | None = None
-    iot_class: str | None = None
+    codeowners: list[str] = []
     documentation: str | None = None
+    integration_type: str | None = None
+    quality_scale: str | None = None
+    is_built_in: bool = False
+    overwrites_built_in: bool = False

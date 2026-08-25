@@ -77,27 +77,11 @@ async def get_config_entries() -> list[HassConfigEntry]:
     return [HassConfigEntry.model_validate(e) for e in result]
 
 
-async def get_integration_names() -> dict[str, HassManifest]:
-    result = await _send_command({"id": 5, "type": "manifest/list"})
-    _LOGGER.info(result)
-    manifests: dict[str, HassManifest] = {}
-    items = (
-        result.items()
-        if isinstance(result, dict)
-        else ((m.get("domain"), m) for m in result)
+async def get_integration_names() -> list[HassManifest]:
+    result = await _send_command(
+        {"id": 5, "type": "manifest/list"}
     )
-    for domain, manifest in items:
-        if not domain:
-            continue
-        try:
-            manifests[domain] = HassManifest.model_validate(
-                {**manifest, "domain": domain}
-            )
-        except Exception:
-            _LOGGER.warning(
-                "Skipping unparseable manifest for domain %s", domain
-            )
-    return manifests
+    return [HassManifest.model_validate(m) for m in result]
 
 
 async def get_devices_with_location() -> list[Device]:
@@ -112,6 +96,7 @@ async def get_devices_with_location() -> list[Device]:
     area_by_id = {area.area_id: area for area in areas}
     floor_by_id = {floor.floor_id: floor for floor in floors}
     entry_by_id = {entry.entry_id: entry for entry in entries}
+    manifest_by_domain = {m.domain: m for m in manifests}
     result = []
     for device in devices:
         area = area_by_id.get(device.area_id) if device.area_id else None
@@ -127,7 +112,7 @@ async def get_devices_with_location() -> list[Device]:
             else None
         )
         domain = entry.domain if entry else None
-        manifest = manifests.get(domain) if domain else None
+        manifest = manifest_by_domain.get(domain) if domain else None
         result.append(
             Device(
                 id=device.id,
