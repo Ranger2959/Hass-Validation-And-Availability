@@ -40,7 +40,7 @@ class HassArea(BaseModel):
 
     area_id: str = Field(alias="id")
     name: str
-    normalized_name: str
+    normalized_name: str | None = None
     floor_id: str | None = None
     icon: str | None = None
     picture: str | None = None
