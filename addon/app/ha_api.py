@@ -73,6 +73,7 @@ async def get_config_entries() -> list[HassConfigEntry]:
     result = await _send_command(
         {"id": 4, "type": "config_entries/get"}
     )
+    _LOGGER.info(result)
     return [HassConfigEntry.model_validate(e) for e in result.get("entries", [])]
 
 
