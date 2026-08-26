@@ -9,6 +9,12 @@
 <body class="bg-gray-50 text-gray-900 antialiased">
   <div id="app" class="mx-auto max-w-4xl px-4 py-8">
     <h1 class="mb-6 text-3xl font-bold">Device Board</h1>
+    <div class="mb-2 flex justify-end">
+      <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+        <span>Show Ignored</span>
+        <input type="checkbox" v-model="showIgnored" class="h-4 w-4 accent-gray-900" />
+      </label>
+    </div>
     <div class="overflow-x-auto rounded-lg border border-gray-300 bg-white">
       <table class="w-full border-collapse">
         <thead>
@@ -25,10 +31,10 @@
           <tr v-else-if="error" class="odd:bg-white even:bg-gray-100 text-red-600">
             <td colspan="3" class="border-b border-gray-300 px-4 py-3">{{ error }}</td>
           </tr>
-          <tr v-else-if="!devices.length" class="odd:bg-white even:bg-gray-100">
+          <tr v-else-if="!visibleDevices.length" class="odd:bg-white even:bg-gray-100">
             <td colspan="3" class="border-b border-gray-300 px-4 py-3">No devices found</td>
           </tr>
-          <tr v-for="device in devices" v-else :key="device.id"
+          <tr v-for="device in visibleDevices" v-else :key="device.id"
               class="odd:bg-white even:bg-gray-100 cursor-pointer hover:bg-gray-200"
               @click="selected = device">
             <td class="border-b border-gray-300 px-4 py-3">{{ device.name }}</td>
@@ -43,7 +49,7 @@
 
   <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
   <script>
-    const { createApp, ref, onMounted, onBeforeUnmount } = Vue;
+    const { createApp, ref, computed, onMounted, onBeforeUnmount } = Vue;
 
     const DeviceModal = {
       props: {
@@ -94,9 +100,16 @@
       components: { DeviceModal },
       setup() {
         const devices = ref([]);
+        const showIgnored = ref(false);
         const loading = ref(true);
         const error = ref("");
         const selected = ref(null);
+
+        const visibleDevices = computed(() =>
+          showIgnored.value
+            ? devices.value
+            : devices.value.filter((d) => !d.is_ignored)
+        );
 
         onMounted(async () => {
           try {
@@ -105,9 +118,7 @@
               const data = await devRes.json().catch(() => null);
               throw new Error(data?.detail || `Request failed (${devRes.status})`);
             }
-            devices.value = (await devRes.json()).filter(
-              (d) => !d.is_ignored
-            );
+            devices.value = await devRes.json();
           } catch (err) {
             error.value = err.message || "Failed to load devices";
           } finally {
@@ -125,11 +136,11 @@
             error.value = "Failed to ignore device";
             return;
           }
-          devices.value = devices.value.filter((d) => d.id !== device.id);
+          device.is_ignored = true;
           selected.value = null;
         };
 
-        return { devices, loading, error, selected, onIgnore };
+        return { devices, showIgnored, visibleDevices, loading, error, selected, onIgnore };
       },
     }).mount("#app");
   </script>
