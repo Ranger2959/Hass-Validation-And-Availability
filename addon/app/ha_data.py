@@ -3,6 +3,8 @@ import os
 
 from models import AppData
 
+_LOGGER = logging.getLogger(__name__)
+
 DATA_PATH = "/data/data.json"
 
 
