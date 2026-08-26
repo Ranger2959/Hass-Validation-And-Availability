@@ -9,7 +9,11 @@
 </head>
 <body class="bg-gray-50 text-gray-900 antialiased">
   <div id="app" class="mx-auto max-w-4xl px-4 py-8">
-    <h1 class="mb-6 text-3xl font-bold">Device Board</h1>
+    <h1 class="mb-2 text-3xl font-bold">Device Board</h1>
+    <div class="mb-3 text-sm text-gray-600">
+      <div>Total Devices: {{ totalDevices }}</div>
+      <div>Ignored Devices: {{ ignoredCount }}</div>
+    </div>
     <div class="mb-2 flex justify-end">
       <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
         <span>Show Ignored</span>
@@ -44,6 +48,7 @@
           </tr>
           <tr v-for="device in visibleDevices" v-else :key="device.id"
               class="odd:bg-white even:bg-gray-100 cursor-pointer hover:bg-gray-200"
+              :class="{ 'text-gray-400 italic': device.is_ignored }"
               @click="selected = device">
             <td class="border-b border-gray-300 px-4 py-3 text-center">
               <i v-if="device.is_ignored" class="fa-solid fa-ban text-red-500"></i>
@@ -135,6 +140,11 @@
           return list;
         });
 
+        const totalDevices = computed(() => devices.value.length);
+        const ignoredCount = computed(() =>
+          devices.value.filter((d) => d.is_ignored).length
+        );
+
         onMounted(async () => {
           try {
             const devRes = await fetch("{{BASE}}/api/devices");
@@ -178,7 +188,7 @@
           selected.value = null;
         };
 
-        return { devices, showIgnored, ignoredSort, toggleIgnoredSort, visibleDevices, loading, error, selected, onIgnore, onInclude };
+        return { devices, showIgnored, ignoredSort, toggleIgnoredSort, totalDevices, ignoredCount, visibleDevices, loading, error, selected, onIgnore, onInclude };
       },
     }).mount("#app");
   </script>
