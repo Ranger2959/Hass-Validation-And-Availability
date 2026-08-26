@@ -79,9 +79,12 @@
         const openDevicePage = () => {
           window.location.href = `/config/devices/device/${props.device.id}`;
         };
+        const onIncludedChange = (e) => {
+          emit(e.target.checked ? "include" : "ignore");
+        };
         onMounted(() => window.addEventListener("keydown", onKeydown));
         onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
-        return { openDevicePage };
+        return { openDevicePage, onIncludedChange };
       },
       template: `
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click="$emit('close')">
@@ -107,11 +110,15 @@
                 <dt class="shrink-0 text-gray-500">Area</dt>
                 <dd class="break-all text-right font-medium">{{ device.area_name }}</dd>
               </div>
+              <div class="flex items-center justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
+                <dt class="shrink-0 text-gray-500">Included</dt>
+                <dd class="text-right">
+                  <input type="checkbox" :checked="!device.is_ignored" @change="onIncludedChange" class="h-4 w-4 accent-gray-900" />
+                </dd>
+              </div>
             </dl>
-            <div class="flex justify-end gap-2 border-t border-gray-200 px-5 py-4">
+            <div class="flex justify-end border-t border-gray-200 px-5 py-4">
               <button class="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-500" @click="openDevicePage">Open Device Page</button>
-              <button v-if="device.is_ignored" class="rounded-md bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-500" @click="$emit('include')">Include</button>
-              <button v-else class="rounded-md bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-500" @click="$emit('ignore')">Ignore</button>
             </div>
           </div>
         </div>
