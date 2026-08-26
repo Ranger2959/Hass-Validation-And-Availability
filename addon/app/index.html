@@ -60,7 +60,7 @@
         </tbody>
       </table>
     </div>
-    <device-modal v-if="selected" :device="selected" @close="selected = null" @ignore="onIgnore" @include="onInclude" />
+    <device-modal v-if="selected" :device="selected" @close="selected = null" />
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
@@ -71,20 +71,36 @@
       props: {
         device: { type: Object, required: true },
       },
-      emits: ["close", "ignore", "include"],
+      emits: ["close"],
       setup(props, { emit }) {
+        const included = ref(!props.device.is_ignored);
+        const originalIncluded = !props.device.is_ignored;
+        const canSave = computed(() => included.value !== originalIncluded);
+        const saveError = ref("");
+
         const onKeydown = (e) => {
           if (e.key === "Escape") emit("close");
         };
         const openDevicePage = () => {
           window.location.href = `/config/devices/device/${props.device.id}`;
         };
-        const onIncludedChange = (e) => {
-          emit(e.target.checked ? "include" : "ignore");
+        const onSave = async () => {
+          const endpoint = included.value ? "include" : "ignore";
+          saveError.value = "";
+          const res = await fetch(
+            `{{BASE}}/api/devices/${props.device.id}/${endpoint}`,
+            { method: "POST" }
+          );
+          if (!res.ok) {
+            saveError.value = "Failed to save";
+            return;
+          }
+          props.device.is_ignored = !included.value;
+          emit("close");
         };
         onMounted(() => window.addEventListener("keydown", onKeydown));
         onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
-        return { openDevicePage, onIncludedChange };
+        return { included, canSave, saveError, openDevicePage, onSave };
       },
       template: `
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click="$emit('close')">
@@ -113,12 +129,14 @@
               <div class="flex items-center justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
                 <dt class="shrink-0 text-gray-500">Included</dt>
                 <dd class="text-right">
-                  <input type="checkbox" :checked="!device.is_ignored" @change="onIncludedChange" class="h-4 w-4 accent-gray-900" />
+                  <input type="checkbox" v-model="included" class="h-4 w-4 accent-gray-900" />
                 </dd>
               </div>
             </dl>
-            <div class="flex justify-end border-t border-gray-200 px-5 py-4">
+            <div v-if="saveError" class="px-5 py-2 text-sm text-red-600">{{ saveError }}</div>
+            <div class="flex justify-end gap-2 border-t border-gray-200 px-5 py-4">
               <button class="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-500" @click="openDevicePage">Open Device Page</button>
+              <button class="rounded-md bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-500 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500" :disabled="!canSave" @click="onSave">Save</button>
             </div>
           </div>
         </div>
@@ -172,35 +190,7 @@
           }
         });
 
-        const onIgnore = async () => {
-          const device = selected.value;
-          const res = await fetch(
-            `{{BASE}}/api/devices/${device.id}/ignore`,
-            { method: "POST" }
-          );
-          if (!res.ok) {
-            error.value = "Failed to ignore device";
-            return;
-          }
-          device.is_ignored = true;
-          selected.value = null;
-        };
-
-        const onInclude = async () => {
-          const device = selected.value;
-          const res = await fetch(
-            `{{BASE}}/api/devices/${device.id}/include`,
-            { method: "POST" }
-          );
-          if (!res.ok) {
-            error.value = "Failed to include device";
-            return;
-          }
-          device.is_ignored = false;
-          selected.value = null;
-        };
-
-        return { devices, showIgnored, ignoredSort, toggleIgnoredSort, totalDevices, ignoredCount, visibleDevices, loading, error, selected, onIgnore, onInclude };
+        return { devices, showIgnored, ignoredSort, toggleIgnoredSort, totalDevices, ignoredCount, visibleDevices, loading, error, selected };
       },
     }).mount("#app");
   </script>
