@@ -9,7 +9,7 @@ from typing import Any
 import websockets
 
 import ha_config
-from ha_data import _load_data
+import ha_data
 from models import (
     AppData,
     Device,
@@ -100,7 +100,7 @@ async def get_devices_with_location() -> list[Device]:
     floor_by_id = {floor.floor_id: floor for floor in floors}
     entry_by_id = {entry.entry_id: entry for entry in entries}
     manifest_by_domain = {m.domain: m for m in manifests}
-    ignored_ids = set(_load_data().ignored_devices)
+    ignored_ids = set(ha_data._load_data().ignored_devices)
     result = []
     for device in devices:
         area = area_by_id.get(device.area_id) if device.area_id else None
