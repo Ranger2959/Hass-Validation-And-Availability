@@ -76,8 +76,12 @@
         const onKeydown = (e) => {
           if (e.key === "Escape") emit("close");
         };
+        const openDevicePage = () => {
+          window.location.href = `/config/devices/device/${props.device.id}`;
+        };
         onMounted(() => window.addEventListener("keydown", onKeydown));
         onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
+        return { openDevicePage };
       },
       template: `
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click="$emit('close')">
@@ -104,7 +108,8 @@
                 <dd class="break-all text-right font-medium">{{ device.area_name }}</dd>
               </div>
             </dl>
-            <div class="flex justify-end border-t border-gray-200 px-5 py-4">
+            <div class="flex justify-end gap-2 border-t border-gray-200 px-5 py-4">
+              <button class="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-500" @click="openDevicePage">Open Device Page</button>
               <button v-if="device.is_ignored" class="rounded-md bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-500" @click="$emit('include')">Include</button>
               <button v-else class="rounded-md bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-500" @click="$emit('ignore')">Ignore</button>
             </div>

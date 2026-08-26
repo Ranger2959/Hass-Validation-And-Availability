@@ -3,8 +3,7 @@ import os
 
 from models import AppData
 
-DATA_DIR = os.environ.get("SUPERVISOR_CONFIG_DIR", "/config")
-DATA_PATH = os.path.join(DATA_DIR, "data.json")
+DATA_PATH = "/data/data.json"
 
 
 def _load_data() -> AppData:
@@ -17,7 +16,7 @@ def _load_data() -> AppData:
 
 
 def _save_data(data: AppData) -> None:
-    os.makedirs(DATA_DIR, exist_ok=True)
+    os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
     with open(DATA_PATH, "w") as f:
         json.dump(data.model_dump(by_alias=True), f, indent=4)
 
