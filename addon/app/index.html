@@ -44,7 +44,7 @@
         </tbody>
       </table>
     </div>
-    <device-modal v-if="selected" :device="selected" @close="selected = null" @ignore="onIgnore" />
+    <device-modal v-if="selected" :device="selected" @close="selected = null" @ignore="onIgnore" @include="onInclude" />
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
@@ -55,7 +55,7 @@
       props: {
         device: { type: Object, required: true },
       },
-      emits: ["close", "ignore"],
+      emits: ["close", "ignore", "include"],
       setup(props, { emit }) {
         const onKeydown = (e) => {
           if (e.key === "Escape") emit("close");
@@ -89,7 +89,8 @@
               </div>
             </dl>
             <div class="flex justify-end border-t border-gray-200 px-5 py-4">
-              <button class="rounded-md bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-500" @click="$emit('ignore')">Ignore</button>
+              <button v-if="device.is_ignored" class="rounded-md bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-500" @click="$emit('include')">Include</button>
+              <button v-else class="rounded-md bg-red-600 px-4 py-2 font-medium text-white hover:bg-red-500" @click="$emit('ignore')">Ignore</button>
             </div>
           </div>
         </div>
@@ -140,7 +141,21 @@
           selected.value = null;
         };
 
-        return { devices, showIgnored, visibleDevices, loading, error, selected, onIgnore };
+        const onInclude = async () => {
+          const device = selected.value;
+          const res = await fetch(
+            `{{BASE}}/api/devices/${device.id}/include`,
+            { method: "POST" }
+          );
+          if (!res.ok) {
+            error.value = "Failed to include device";
+            return;
+          }
+          device.is_ignored = false;
+          selected.value = null;
+        };
+
+        return { devices, showIgnored, visibleDevices, loading, error, selected, onIgnore, onInclude };
       },
     }).mount("#app");
   </script>

@@ -30,6 +30,11 @@ async def list_devices() -> list[models.Device]:
 async def ignore_device(device_id: str) -> dict:
     return {"ignoredDevices": ha_data.ignore_device(device_id)}
 
+
+@api_router.post("/devices/{device_id}/include")
+async def include_device(device_id: str) -> dict:
+    return {"ignoredDevices": ha_data.unignore_device(device_id)}
+
 app = FastAPI()
 app.include_router(api_router)
 

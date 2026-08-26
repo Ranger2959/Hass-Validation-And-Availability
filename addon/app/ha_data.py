@@ -26,3 +26,11 @@ def ignore_device(device_id: str) -> list[str]:
         data.ignored_devices.append(device_id)
         _save_data(data)
     return data.ignored_devices
+
+
+def unignore_device(device_id: str) -> list[str]:
+    data = _load_data()
+    if device_id in data.ignored_devices:
+        data.ignored_devices.remove(device_id)
+        _save_data(data)
+    return data.ignored_devices
