@@ -60,7 +60,7 @@
         </tbody>
       </table>
     </div>
-    <device-modal v-if="selected" :device="selected" :areas="areas" @close="selected = null" />
+    <device-modal v-if="selected" :device="selected" :areas="areas" @close="selected = null" @refresh="refreshDevices" />
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
@@ -72,7 +72,7 @@
         device: { type: Object, required: true },
         areas: { type: Array, required: true },
       },
-      emits: ["close"],
+      emits: ["close", "refresh"],
       setup(props, { emit }) {
         const included = ref(!props.device.is_ignored);
         const originalIncluded = ref(!props.device.is_ignored);
@@ -97,6 +97,7 @@
           saveError.value = "";
           areaError.value = "";
           let ok = true;
+          let areaChanged = false;
 
           if (areaSelect.value !== originalArea.value) {
             areaSaving.value = true;
@@ -123,6 +124,7 @@
               );
               props.device.area_name = area ? area.name : "Unassigned";
               originalArea.value = areaSelect.value;
+              areaChanged = true;
             }
           }
 
@@ -142,6 +144,7 @@
           }
 
           if (ok) {
+            if (areaChanged) emit("refresh");
             emit("close");
           }
         };
@@ -239,6 +242,19 @@
           devices.value.filter((d) => d.is_ignored).length
         );
 
+        const refreshDevices = async () => {
+          try {
+            const res = await fetch("{{BASE}}/api/devices");
+            if (!res.ok) {
+              const data = await res.json().catch(() => null);
+              throw new Error(data?.detail || `Request failed (${res.status})`);
+            }
+            devices.value = await res.json();
+          } catch (err) {
+            error.value = err.message || "Failed to load devices";
+          }
+        };
+
         onMounted(async () => {
           try {
             const [devRes, areaRes] = await Promise.all([
@@ -260,7 +276,7 @@
           }
         });
 
-        return { devices, areas, showIgnored, ignoredSort, toggleIgnoredSort, totalDevices, ignoredCount, visibleDevices, loading, error, selected };
+        return { devices, areas, showIgnored, ignoredSort, toggleIgnoredSort, totalDevices, ignoredCount, visibleDevices, loading, error, selected, refreshDevices };
       },
     }).mount("#app");
   </script>
