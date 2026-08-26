@@ -60,7 +60,7 @@
         </tbody>
       </table>
     </div>
-    <device-modal v-if="selected" :device="selected" @close="selected = null" />
+    <device-modal v-if="selected" :device="selected" :areas="areas" @close="selected = null" />
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/vue@3/dist/vue.global.js"></script>
@@ -70,13 +70,22 @@
     const DeviceModal = {
       props: {
         device: { type: Object, required: true },
+        areas: { type: Array, required: true },
       },
       emits: ["close"],
       setup(props, { emit }) {
         const included = ref(!props.device.is_ignored);
-        const originalIncluded = !props.device.is_ignored;
-        const canSave = computed(() => included.value !== originalIncluded);
+        const originalIncluded = ref(!props.device.is_ignored);
+        const areaSelect = ref(props.device.area_id || null);
+        const originalArea = ref(props.device.area_id || null);
+        const areaSaving = ref(false);
+        const areaError = ref("");
         const saveError = ref("");
+        const canSave = computed(
+          () =>
+            included.value !== originalIncluded.value ||
+            areaSelect.value !== originalArea.value
+        );
 
         const onKeydown = (e) => {
           if (e.key === "Escape") emit("close");
@@ -85,22 +94,69 @@
           window.location.href = `/config/devices/device/${props.device.id}`;
         };
         const onSave = async () => {
-          const endpoint = included.value ? "include" : "ignore";
           saveError.value = "";
-          const res = await fetch(
-            `{{BASE}}/api/devices/${props.device.id}/${endpoint}`,
-            { method: "POST" }
-          );
-          if (!res.ok) {
-            saveError.value = "Failed to save";
-            return;
+          areaError.value = "";
+          let ok = true;
+
+          if (areaSelect.value !== originalArea.value) {
+            areaSaving.value = true;
+            const res = await fetch(
+              `{{BASE}}/api/devices/${props.device.id}`,
+              {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ area_id: areaSelect.value }),
+              }
+            );
+            areaSaving.value = false;
+            if (!res.ok) {
+              const data = await res.json().catch(() => null);
+              areaSelect.value = originalArea.value;
+              areaError.value =
+                data?.detail || `Request failed (${res.status})`;
+              ok = false;
+            } else {
+              const updated = await res.json();
+              props.device.area_id = updated.area_id;
+              const area = props.areas.find(
+                (a) => a.area_id === updated.area_id
+              );
+              props.device.area_name = area ? area.name : "Unassigned";
+              originalArea.value = areaSelect.value;
+            }
           }
-          props.device.is_ignored = !included.value;
-          emit("close");
+
+          if (ok && included.value !== originalIncluded.value) {
+            const endpoint = included.value ? "include" : "ignore";
+            const res = await fetch(
+              `{{BASE}}/api/devices/${props.device.id}/${endpoint}`,
+              { method: "POST" }
+            );
+            if (!res.ok) {
+              saveError.value = "Failed to save";
+              ok = false;
+            } else {
+              props.device.is_ignored = !included.value;
+              originalIncluded.value = included.value;
+            }
+          }
+
+          if (ok) {
+            emit("close");
+          }
         };
         onMounted(() => window.addEventListener("keydown", onKeydown));
         onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
-        return { included, canSave, saveError, openDevicePage, onSave };
+        return {
+          included,
+          areaSelect,
+          areaSaving,
+          areaError,
+          saveError,
+          canSave,
+          openDevicePage,
+          onSave,
+        };
       },
       template: `
         <div class="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4" @click="$emit('close')">
@@ -122,9 +178,16 @@
                 <dt class="shrink-0 text-gray-500">Floor</dt>
                 <dd class="break-all text-right font-medium">{{ device.floor_name }}</dd>
               </div>
-              <div class="flex justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
+              <div class="flex items-center justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
                 <dt class="shrink-0 text-gray-500">Area</dt>
-                <dd class="break-all text-right font-medium">{{ device.area_name }}</dd>
+                <dd class="flex items-center gap-2">
+                  <select v-model="areaSelect" :disabled="areaSaving" class="max-w-[11rem] rounded-md border border-gray-300 bg-white px-2 py-1 text-sm">
+                    <option :value="null">Unassigned</option>
+                    <option v-for="a in areas" :key="a.area_id" :value="a.area_id">{{ a.name }}</option>
+                  </select>
+                  <span v-if="areaSaving" class="text-sm text-gray-400">Saving…</span>
+                  <span v-else-if="areaError" class="text-sm text-red-600">{{ areaError }}</span>
+                </dd>
               </div>
               <div class="flex items-center justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
                 <dt class="shrink-0 text-gray-500">Included</dt>
@@ -134,7 +197,7 @@
               </div>
             </dl>
             <div v-if="saveError" class="px-5 py-2 text-sm text-red-600">{{ saveError }}</div>
-            <div class="flex justify-end gap-2 border-t border-gray-200 px-5 py-4">
+            <div class="flex justify-between border-t border-gray-200 px-5 py-4">
               <button class="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-500" @click="openDevicePage">Open Device Page</button>
               <button class="rounded-md bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-500 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500" :disabled="!canSave" @click="onSave">Save</button>
             </div>
@@ -147,6 +210,7 @@
       components: { DeviceModal },
       setup() {
         const devices = ref([]);
+        const areas = ref([]);
         const showIgnored = ref(false);
         const ignoredSort = ref(null);
         const loading = ref(true);
@@ -177,12 +241,18 @@
 
         onMounted(async () => {
           try {
-            const devRes = await fetch("{{BASE}}/api/devices");
+            const [devRes, areaRes] = await Promise.all([
+              fetch("{{BASE}}/api/devices"),
+              fetch("{{BASE}}/api/areas"),
+            ]);
             if (!devRes.ok) {
               const data = await devRes.json().catch(() => null);
               throw new Error(data?.detail || `Request failed (${devRes.status})`);
             }
             devices.value = await devRes.json();
+            if (areaRes.ok) {
+              areas.value = await areaRes.json();
+            }
           } catch (err) {
             error.value = err.message || "Failed to load devices";
           } finally {
@@ -190,7 +260,7 @@
           }
         });
 
-        return { devices, showIgnored, ignoredSort, toggleIgnoredSort, totalDevices, ignoredCount, visibleDevices, loading, error, selected };
+        return { devices, areas, showIgnored, ignoredSort, toggleIgnoredSort, totalDevices, ignoredCount, visibleDevices, loading, error, selected };
       },
     }).mount("#app");
   </script>

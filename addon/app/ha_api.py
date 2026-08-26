@@ -120,6 +120,7 @@ async def get_devices_with_location() -> list[Device]:
         result.append(
             Device(
                 id=device.id,
+                area_id=device.area_id,
                 name=device.name_by_user or device.name or "Unnamed device",
                 area_name=area.name if area else "Unassigned",
                 floor_name=floor.name if floor else "Unassigned",
@@ -136,3 +137,17 @@ async def get_devices_with_location() -> list[Device]:
 
 async def get_devices() -> list[Device]:
     return await get_devices_with_location()
+
+
+async def update_device_area(
+    device_id: str, area_id: str | None
+) -> HassDevice:
+    result = await _send_command(
+        {
+            "id": 6,
+            "type": "config/device_registry/update",
+            "device_id": device_id,
+            "area_id": area_id,
+        }
+    )
+    return HassDevice(**result)

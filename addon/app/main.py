@@ -35,6 +35,29 @@ async def ignore_device(device_id: str) -> dict:
 async def include_device(device_id: str) -> dict:
     return {"ignoredDevices": ha_data.unignore_device(device_id)}
 
+
+@api_router.get("/areas")
+async def list_areas() -> list[models.HassArea]:
+    try:
+        return await ha_api.get_areas()
+    except Exception as exc:
+        _LOGGER.error("Failed to fetch areas from Home Assistant: %s", exc)
+        raise HTTPException(status_code=502, detail=f"Home Assistant request failed: {exc}")
+
+
+@api_router.patch("/devices/{device_id}")
+async def update_device(
+    device_id: str, body: models.UpdateDeviceArea
+):
+    try:
+        return await ha_api.update_device_area(device_id, body.area_id)
+    except models.HomeAssistantError as exc:
+        _LOGGER.error("Failed to update device area: %s", exc)
+        raise HTTPException(status_code=502, detail=str(exc))
+    except Exception as exc:
+        _LOGGER.error("Failed to update device: %s", exc)
+        raise HTTPException(status_code=502, detail=f"Home Assistant request failed: {exc}")
+
 app = FastAPI()
 app.include_router(api_router)
 

@@ -31,10 +31,15 @@ class HassDevice(BaseModel):
 class Device(BaseModel):
     id: str
     name: str
+    area_id: str | None = None
     area_name: str | None = None
     floor_name: str | None = None
     integration_name: str | None = None
     is_ignored: bool = False
+
+
+class UpdateDeviceArea(BaseModel):
+    area_id: str | None = None
 
 
 class HassArea(BaseModel):
