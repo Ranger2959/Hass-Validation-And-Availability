@@ -10,13 +10,13 @@ def _load_data() -> AppData:
     try:
         with open(DATA_PATH, "r") as f:
             raw = json.load(f)
+            _LOGGER.info(raw)
     except (OSError, ValueError):
         raw = {}
     return AppData.model_validate(raw)
 
 
 def _save_data(data: AppData) -> None:
-    os.makedirs(os.path.dirname(DATA_PATH), exist_ok=True)
     with open(DATA_PATH, "w") as f:
         json.dump(data.model_dump(by_alias=True), f, indent=4)
 
