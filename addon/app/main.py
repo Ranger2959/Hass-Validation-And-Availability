@@ -6,6 +6,7 @@ import uvicorn
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 import ha_api
+import ha_data
 import models
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -27,7 +28,7 @@ async def list_devices() -> list[models.Device]:
 
 @api_router.post("/devices/{device_id}/ignore")
 async def ignore_device(device_id: str) -> dict:
-    return {"ignoredDevices": ha_api.ignore_device(device_id)}
+    return {"ignoredDevices": ha_data.ignore_device(device_id)}
 
 app = FastAPI()
 app.include_router(api_router)

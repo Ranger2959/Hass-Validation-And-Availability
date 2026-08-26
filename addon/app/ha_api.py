@@ -9,7 +9,7 @@ from typing import Any
 import websockets
 
 import ha_config
-from ha_data import ignore_device
+from ha_data import _load_data
 from models import (
     AppData,
     Device,
@@ -95,7 +95,7 @@ async def get_devices_with_location() -> list[Device]:
         get_config_entries(),
         get_integration_names(),
     )
-    _LOGGER.info(entries)
+    
     area_by_id = {area.area_id: area for area in areas}
     floor_by_id = {floor.floor_id: floor for floor in floors}
     entry_by_id = {entry.entry_id: entry for entry in entries}
