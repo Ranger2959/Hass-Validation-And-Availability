@@ -96,9 +96,9 @@ async def get_devices_with_location() -> list[Device]:
         get_integration_names(),
     )
     
-    area_by_id = {area.id: area for area in areas}
-    floor_by_id = {floor.id: floor for floor in floors}
-    entry_by_id = {entry.id: entry for entry in entries}
+    area_by_id = {area.area_id: area for area in areas}
+    floor_by_id = {floor.floor_id: floor for floor in floors}
+    entry_by_id = {entry.entry_id: entry for entry in entries}
     manifest_by_domain = {m.domain: m for m in manifests}
     ignored_ids = set(ha_data._load_data().ignored_devices)
     result = []

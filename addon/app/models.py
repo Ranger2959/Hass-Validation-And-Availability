@@ -43,7 +43,9 @@ class UpdateDeviceArea(BaseModel):
 
 
 class HassArea(BaseModel):
-    id: str
+    model_config = ConfigDict(populate_by_name=True)
+
+    area_id: str = Field(validation_alias="id", serialization_alias="area_id")
     name: str
     normalized_name: str | None = None
     floor_id: str | None = None
@@ -56,7 +58,9 @@ class HassArea(BaseModel):
 
 
 class HassFloor(BaseModel):
-    id: str
+    model_config = ConfigDict(populate_by_name=True)
+
+    floor_id: str = Field(validation_alias="id", serialization_alias="floor_id")
     name: str
     icon: str | None = None
     level: int | None = None
@@ -64,7 +68,7 @@ class HassFloor(BaseModel):
 
 
 class HassConfigEntry(BaseModel):
-    id: str = Field(validation_alias="entry_id")
+    entry_id: str
     domain: str
     title: str | None = None
     source: str | None = None
