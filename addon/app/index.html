@@ -13,7 +13,7 @@
     <div class="mb-3 text-sm text-gray-600">
       <div>Total Devices: {{ totalDevices }}</div>
       <div>Ignored Devices: {{ ignoredCount }}</div>
-      <div>Validated Devices: {{ validatedCount }}</div>
+      <div>Area Validated Devices: {{ validatedCount }}</div>
       <div :class="{ 'text-red-600': areaMismatchCount }">
         Area Mismatch: {{ areaMismatchCount }}
       </div>
@@ -56,7 +56,7 @@
               @click="selected = device">
             <td class="border-b border-gray-300 px-4 py-3 text-center">
               <i v-if="device.is_ignored" class="fa-solid fa-ban text-red-500"></i>
-              <i v-if="device.is_validated" class="fa-solid fa-check text-green-600"></i>
+              <i v-if="device.is_area_validated" class="fa-solid fa-check text-green-600"></i>
             </td>
             <td class="border-b border-gray-300 px-4 py-3">{{ device.name }}</td>
             <td class="border-b border-gray-300 px-4 py-3">{{ device.integration_name }}</td>
@@ -81,8 +81,8 @@
       setup(props, { emit }) {
         const included = ref(!props.device.is_ignored);
         const originalIncluded = ref(!props.device.is_ignored);
-        const validated = ref(!!props.device.is_validated);
-        const originalValidated = ref(!!props.device.is_validated);
+        const validated = ref(!!props.device.is_area_validated);
+        const originalValidated = ref(!!props.device.is_area_validated);
         const areaSelect = ref(props.device.area_id || null);
         const originalArea = ref(props.device.area_id || null);
         const entitySelect = ref(props.device.monitored_entity || null);
@@ -113,8 +113,8 @@
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
-                  included: included.value,
-                  validated: validated.value,
+                  is_included: included.value,
+                  is_area_validated: validated.value,
                   area_id: areaSelect.value,
                   update_area: areaSelect.value !== originalArea.value,
                   monitored_entity_id: entitySelect.value,
@@ -128,7 +128,7 @@
               return;
             }
             props.device.is_ignored = !included.value;
-            props.device.is_validated = validated.value;
+            props.device.is_area_validated = validated.value;
             if (areaSelect.value !== originalArea.value) {
               props.device.area_id = areaSelect.value;
               const area = props.areas.find(
@@ -206,7 +206,7 @@
                 </dd>
               </div>
               <div class="flex items-center justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
-                <dt class="shrink-0 text-gray-500">Validated</dt>
+                <dt class="shrink-0 text-gray-500">Area Validated</dt>
                 <dd class="text-right">
                   <input type="checkbox" v-model="validated" class="h-4 w-4 accent-gray-900" />
                 </dd>
@@ -255,16 +255,16 @@
             ? "bg-red-100 hover:bg-red-200"
             : d.is_ignored
               ? "bg-gray-100 hover:bg-gray-200"
-              : d.is_validated
-                ? "bg-green-100 hover:bg-green-200"
-                : "bg-yellow-100 hover:bg-yellow-200";
+          : d.is_area_validated && d.monitored_entity
+            ? "bg-green-100 hover:bg-green-200"
+            : "bg-yellow-100 hover:bg-yellow-200";
 
         const totalDevices = computed(() => devices.value.length);
         const ignoredCount = computed(() =>
           devices.value.filter((d) => d.is_ignored).length
         );
         const validatedCount = computed(() =>
-          devices.value.filter((d) => d.is_validated).length
+          devices.value.filter((d) => d.is_area_validated).length
         );
         const areaMismatchCount = computed(() =>
           devices.value.filter((d) => d.is_area_mismatched).length

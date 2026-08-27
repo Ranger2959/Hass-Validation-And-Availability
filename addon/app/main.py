@@ -42,8 +42,8 @@ async def save_device(device_id: str, body: models.SaveDevice) -> dict:
             )
     ignored, validated_devices = ha_data.save_device_state(
         device_id,
-        body.included,
-        body.validated,
+        body.is_included,
+        body.is_area_validated,
         body.area_id,
         body.monitored_entity_id,
     )

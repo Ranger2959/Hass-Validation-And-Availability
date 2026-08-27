@@ -150,7 +150,7 @@ async def get_devices_with_location() -> list[Device]:
                     else domain or "Unknown"
                 ),
                 is_ignored=device.id in ignored_ids,
-                is_validated=validated is not None,
+                is_area_validated=validated is not None,
                 is_area_mismatched=(
                     validated is not None
                     and validated.area_id != device.area_id

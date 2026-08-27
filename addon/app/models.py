@@ -49,7 +49,7 @@ class Device(BaseModel):
     floor_name: str | None = None
     integration_name: str | None = None
     is_ignored: bool = False
-    is_validated: bool = False
+    is_area_validated: bool = False
     is_area_mismatched: bool = False
     entities: list[HassEntity] = []
     monitored_entity: str | None = None
@@ -97,8 +97,8 @@ class ValidatedDevice(BaseModel):
 
 
 class SaveDevice(BaseModel):
-    included: bool
-    validated: bool
+    is_included: bool
+    is_area_validated: bool
     area_id: str | None = None
     update_area: bool = False
     monitored_entity_id: str | None = None

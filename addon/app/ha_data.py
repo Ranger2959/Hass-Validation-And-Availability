@@ -25,24 +25,24 @@ def _save_data(data: AppData) -> None:
 
 def save_device_state(
     device_id: str,
-    included: bool,
-    validated: bool,
+    is_included: bool,
+    is_area_validated: bool,
     area_id: str | None,
     monitored_entity_id: str | None,
 ) -> tuple[list[str], list[ValidatedDevice]]:
     data = _load_data()
     changed = False
-    if device_id in data.ignored_devices and included:
+    if device_id in data.ignored_devices and is_included:
         data.ignored_devices.remove(device_id)
         changed = True
-    elif device_id not in data.ignored_devices and not included:
+    elif device_id not in data.ignored_devices and not is_included:
         data.ignored_devices.append(device_id)
         changed = True
     existing = next(
         (v for v in data.validated_devices if v.device_id == device_id),
         None,
     )
-    if existing is None and validated:
+    if existing is None and is_area_validated:
         data.validated_devices.append(
             ValidatedDevice(
                 device_id=device_id,
@@ -51,7 +51,7 @@ def save_device_state(
             )
         )
         changed = True
-    elif existing is not None and not validated:
+    elif existing is not None and not is_area_validated:
         data.validated_devices = [
             v for v in data.validated_devices if v.device_id != device_id
         ]
