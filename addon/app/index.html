@@ -222,13 +222,14 @@
                   <span v-else-if="areaError" class="text-sm text-red-600">{{ areaError }}</span>
                 </dd>
               </div>
-              <div v-if="device.entities.length" class="flex items-center justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
+              <div class="flex items-center justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
                 <dt class="shrink-0 text-gray-500">Entities</dt>
                 <dd>
-                  <select v-model="entitySelect" class="max-w-[13rem] rounded-md border border-gray-300 bg-white px-2 py-1 text-sm">
+                  <select v-if="device.entities.length" v-model="entitySelect" class="max-w-[13rem] rounded-md border border-gray-300 bg-white px-2 py-1 text-sm">
                     <option :value="null"></option>
                     <option v-for="e in device.entities" :key="e.entity_id" :value="e.entity_id">{{ e.name }} [{{ e.entity_id }}]</option>
                   </select>
+                  <span v-else class="text-sm text-red-600">No entities</span>
                 </dd>
               </div>
               <div class="flex items-center justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
