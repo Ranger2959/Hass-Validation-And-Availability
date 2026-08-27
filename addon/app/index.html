@@ -87,6 +87,7 @@
         const originalArea = ref(props.device.area_id || null);
         const areaSaving = ref(false);
         const areaError = ref("");
+        const entitySelect = ref(null);
         const saveError = ref("");
         const canSave = computed(
           () =>
@@ -183,6 +184,7 @@
           areaSelect,
           areaSaving,
           areaError,
+          entitySelect,
           saveError,
           canSave,
           openDevicePage,
@@ -218,6 +220,15 @@
                   </select>
                   <span v-if="areaSaving" class="text-sm text-gray-400">Saving…</span>
                   <span v-else-if="areaError" class="text-sm text-red-600">{{ areaError }}</span>
+                </dd>
+              </div>
+              <div v-if="device.entities.length" class="flex items-center justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
+                <dt class="shrink-0 text-gray-500">Entities</dt>
+                <dd>
+                  <select v-model="entitySelect" class="max-w-[13rem] rounded-md border border-gray-300 bg-white px-2 py-1 text-sm">
+                    <option :value="null"></option>
+                    <option v-for="e in device.entities" :key="e.entity_id" :value="e.entity_id">{{ e.name }} [{{ e.entity_id }}]</option>
+                  </select>
                 </dd>
               </div>
               <div class="flex items-center justify-between gap-4 border-b border-gray-100 py-2 last:border-0">

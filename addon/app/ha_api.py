@@ -13,6 +13,7 @@ import ha_data
 from models import (
     AppData,
     Device,
+    HassEntity,
     HassManifest,
     HassArea,
     HassConfigEntry,
@@ -73,6 +74,13 @@ async def get_floors() -> list[HassFloor]:
     return [HassFloor.model_validate(d) for d in result]
 
 
+async def get_entities() -> list[HassEntity]:
+    result = await _send_command(
+        {"id": 7, "type": "config/entity_registry/list"}
+    )
+    return [HassEntity(**e) for e in result]
+
+
 async def get_config_entries() -> list[HassConfigEntry]:
     result = await _send_command(
         {"id": 4, "type": "config_entries/get"}
@@ -88,18 +96,25 @@ async def get_integration_names() -> list[HassManifest]:
 
 
 async def get_devices_with_location() -> list[Device]:
-    devices, areas, floors, entries, manifests = await asyncio.gather(
-        get_hass_devices(),
-        get_areas(),
-        get_floors(),
-        get_config_entries(),
-        get_integration_names(),
+    devices, areas, floors, entries, manifests, entities = (
+        await asyncio.gather(
+            get_hass_devices(),
+            get_areas(),
+            get_floors(),
+            get_config_entries(),
+            get_integration_names(),
+            get_entities(),
+        )
     )
     
     area_by_id = {area.area_id: area for area in areas}
     floor_by_id = {floor.floor_id: floor for floor in floors}
     entry_by_id = {entry.entry_id: entry for entry in entries}
     manifest_by_domain = {m.domain: m for m in manifests}
+    entities_by_device: dict[str, list[HassEntity]] = {}
+    for entity in entities:
+        if entity.device_id:
+            entities_by_device.setdefault(entity.device_id, []).append(entity)
     app_data = ha_data._load_data()
     ignored_ids = set(app_data.ignored_devices)
     validated_by_id = {v.device_id: v for v in app_data.validated_devices}
@@ -138,6 +153,7 @@ async def get_devices_with_location() -> list[Device]:
                     validated is not None
                     and validated.area_id != device.area_id
                 ),
+                entities=entities_by_device.get(device.id, []),
             )
         )
     return result

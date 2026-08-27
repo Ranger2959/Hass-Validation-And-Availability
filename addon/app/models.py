@@ -28,6 +28,19 @@ class HassDevice(BaseModel):
     labels: list[str] = []
 
 
+class HassEntity(BaseModel):
+    entity_id: str
+    device_id: str | None = None
+    area_id: str | None = None
+    name: str | None = None
+    original_name: str | None = None
+    platform: str | None = None
+    disabled_by: str | None = None
+    hidden_by: str | None = None
+    icon: str | None = None
+    entity_category: str | None = None
+
+
 class Device(BaseModel):
     id: str
     name: str
@@ -38,6 +51,7 @@ class Device(BaseModel):
     is_ignored: bool = False
     is_validated: bool = False
     is_area_mismatched: bool = False
+    entities: list[HassEntity] = []
 
 
 class UpdateDeviceArea(BaseModel):
