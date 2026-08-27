@@ -13,6 +13,7 @@
     <div class="mb-3 text-sm text-gray-600">
       <div>Total Devices: {{ totalDevices }}</div>
       <div>Ignored Devices: {{ ignoredCount }}</div>
+      <div>Validated Devices: {{ validatedCount }}</div>
     </div>
     <div class="mb-2 flex justify-end">
       <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
@@ -52,6 +53,7 @@
               @click="selected = device">
             <td class="border-b border-gray-300 px-4 py-3 text-center">
               <i v-if="device.is_ignored" class="fa-solid fa-ban text-red-500"></i>
+              <i v-if="device.is_validated" class="fa-solid fa-check text-green-600"></i>
             </td>
             <td class="border-b border-gray-300 px-4 py-3">{{ device.name }}</td>
             <td class="border-b border-gray-300 px-4 py-3">{{ device.integration_name }}</td>
@@ -76,6 +78,8 @@
       setup(props, { emit }) {
         const included = ref(!props.device.is_ignored);
         const originalIncluded = ref(!props.device.is_ignored);
+        const validated = ref(!!props.device.is_validated);
+        const originalValidated = ref(!!props.device.is_validated);
         const areaSelect = ref(props.device.area_id || null);
         const originalArea = ref(props.device.area_id || null);
         const areaSaving = ref(false);
@@ -84,6 +88,7 @@
         const canSave = computed(
           () =>
             included.value !== originalIncluded.value ||
+            validated.value !== originalValidated.value ||
             areaSelect.value !== originalArea.value
         );
 
@@ -143,6 +148,25 @@
             }
           }
 
+          if (ok && validated.value !== originalValidated.value) {
+            const endpoint = validated.value ? "validate" : "unvalidate";
+            const res = await fetch(
+              `{{BASE}}/api/devices/${props.device.id}/${endpoint}`,
+              {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ area_id: props.device.area_id }),
+              }
+            );
+            if (!res.ok) {
+              saveError.value = "Failed to save";
+              ok = false;
+            } else {
+              props.device.is_validated = validated.value;
+              originalValidated.value = validated.value;
+            }
+          }
+
           if (ok) {
             if (areaChanged) emit("refresh");
             emit("close");
@@ -152,6 +176,7 @@
         onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
         return {
           included,
+          validated,
           areaSelect,
           areaSaving,
           areaError,
@@ -198,6 +223,12 @@
                   <input type="checkbox" v-model="included" class="h-4 w-4 accent-gray-900" />
                 </dd>
               </div>
+              <div class="flex items-center justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
+                <dt class="shrink-0 text-gray-500">Validated</dt>
+                <dd class="text-right">
+                  <input type="checkbox" v-model="validated" class="h-4 w-4 accent-gray-900" />
+                </dd>
+              </div>
             </dl>
             <div v-if="saveError" class="px-5 py-2 text-sm text-red-600">{{ saveError }}</div>
             <div class="flex justify-between border-t border-gray-200 px-5 py-4">
@@ -241,6 +272,9 @@
         const ignoredCount = computed(() =>
           devices.value.filter((d) => d.is_ignored).length
         );
+        const validatedCount = computed(() =>
+          devices.value.filter((d) => d.is_validated).length
+        );
 
         const refreshDevices = async () => {
           try {
@@ -276,7 +310,7 @@
           }
         });
 
-        return { devices, areas, showIgnored, ignoredSort, toggleIgnoredSort, totalDevices, ignoredCount, visibleDevices, loading, error, selected, refreshDevices };
+        return { devices, areas, showIgnored, ignoredSort, toggleIgnoredSort, totalDevices, ignoredCount, validatedCount, visibleDevices, loading, error, selected, refreshDevices };
       },
     }).mount("#app");
   </script>

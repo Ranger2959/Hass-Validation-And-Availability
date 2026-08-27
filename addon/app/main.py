@@ -36,6 +36,22 @@ async def include_device(device_id: str) -> dict:
     return {"ignoredDevices": ha_data.unignore_device(device_id)}
 
 
+@api_router.post("/devices/{device_id}/validate")
+async def validate_device(
+    device_id: str, body: models.UpdateDeviceArea
+) -> dict:
+    return {
+        "validatedDevices": ha_data.validate_device(
+            device_id, body.area_id
+        )
+    }
+
+
+@api_router.post("/devices/{device_id}/unvalidate")
+async def unvalidate_device(device_id: str) -> dict:
+    return {"validatedDevices": ha_data.unvalidate_device(device_id)}
+
+
 @api_router.get("/areas")
 async def list_areas() -> list[models.HassArea]:
     try:

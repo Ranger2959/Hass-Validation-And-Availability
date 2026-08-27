@@ -100,7 +100,9 @@ async def get_devices_with_location() -> list[Device]:
     floor_by_id = {floor.floor_id: floor for floor in floors}
     entry_by_id = {entry.entry_id: entry for entry in entries}
     manifest_by_domain = {m.domain: m for m in manifests}
-    ignored_ids = set(ha_data._load_data().ignored_devices)
+    app_data = ha_data._load_data()
+    ignored_ids = set(app_data.ignored_devices)
+    validated_ids = {v.device_id for v in app_data.validated_devices}
     result = []
     for device in devices:
         area = area_by_id.get(device.area_id) if device.area_id else None
@@ -130,6 +132,7 @@ async def get_devices_with_location() -> list[Device]:
                     else domain or "Unknown"
                 ),
                 is_ignored=device.id in ignored_ids,
+                is_validated=device.id in validated_ids,
             )
         )
     return result

@@ -36,6 +36,7 @@ class Device(BaseModel):
     floor_name: str | None = None
     integration_name: str | None = None
     is_ignored: bool = False
+    is_validated: bool = False
 
 
 class UpdateDeviceArea(BaseModel):
@@ -75,11 +76,21 @@ class HassConfigEntry(BaseModel):
     state: str | None = None
 
 
+class ValidatedDevice(BaseModel):
+    model_config = ConfigDict(populate_by_name=True)
+
+    device_id: str = Field(alias="deviceId")
+    area_id: str | None = Field(default=None, alias="areaId")
+
+
 class AppData(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
     ignored_devices: list[str] = Field(
         default_factory=list, alias="ignoredDevices"
+    )
+    validated_devices: list[ValidatedDevice] = Field(
+        default_factory=list, alias="validatedDevices"
     )
 
 
