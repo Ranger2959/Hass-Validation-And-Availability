@@ -1,5 +1,4 @@
 import json
-import os
 import logging
 
 from models import AppData, ValidatedDevice
@@ -24,38 +23,43 @@ def _save_data(data: AppData) -> None:
         json.dump(data.model_dump(by_alias=True), f, indent=4)
 
 
-def ignore_device(device_id: str) -> list[str]:
+def save_device_state(
+    device_id: str,
+    included: bool,
+    validated: bool,
+    area_id: str | None,
+    entity_id: str | None,
+) -> tuple[list[str], list[ValidatedDevice]]:
     data = _load_data()
-    if device_id not in data.ignored_devices:
-        data.ignored_devices.append(device_id)
-        _save_data(data)
-    return data.ignored_devices
-
-
-def unignore_device(device_id: str) -> list[str]:
-    data = _load_data()
-    if device_id in data.ignored_devices:
+    changed = False
+    if device_id in data.ignored_devices and included:
         data.ignored_devices.remove(device_id)
-        _save_data(data)
-    return data.ignored_devices
-
-
-def validate_device(
-    device_id: str, area_id: str | None
-) -> list[ValidatedDevice]:
-    data = _load_data()
-    if not any(v.device_id == device_id for v in data.validated_devices):
+        changed = True
+    elif device_id not in data.ignored_devices and not included:
+        data.ignored_devices.append(device_id)
+        changed = True
+    existing = next(
+        (v for v in data.validated_devices if v.device_id == device_id),
+        None,
+    )
+    if existing is None and validated:
         data.validated_devices.append(
-            ValidatedDevice(device_id=device_id, area_id=area_id)
+            ValidatedDevice(
+                device_id=device_id, area_id=area_id, entity_id=entity_id
+            )
         )
+        changed = True
+    elif existing is not None and not validated:
+        data.validated_devices = [
+            v for v in data.validated_devices if v.device_id != device_id
+        ]
+        changed = True
+    elif existing is not None and (
+        existing.area_id != area_id or existing.entity_id != entity_id
+    ):
+        existing.area_id = area_id
+        existing.entity_id = entity_id
+        changed = True
+    if changed:
         _save_data(data)
-    return data.validated_devices
-
-
-def unvalidate_device(device_id: str) -> list[ValidatedDevice]:
-    data = _load_data()
-    remaining = [v for v in data.validated_devices if v.device_id != device_id]
-    if len(remaining) != len(data.validated_devices):
-        data.validated_devices = remaining
-        _save_data(data)
-    return data.validated_devices
+    return data.ignored_devices, data.validated_devices

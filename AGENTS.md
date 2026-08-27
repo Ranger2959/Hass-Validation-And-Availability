@@ -1,1 +1,3 @@
 - Increment version in config.yaml with any changes made
+- Remove any unused imports after a change
+- Remove any unused methods, models, references after a change

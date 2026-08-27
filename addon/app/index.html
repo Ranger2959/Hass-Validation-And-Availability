@@ -85,15 +85,16 @@
         const originalValidated = ref(!!props.device.is_validated);
         const areaSelect = ref(props.device.area_id || null);
         const originalArea = ref(props.device.area_id || null);
-        const areaSaving = ref(false);
-        const areaError = ref("");
         const entitySelect = ref(null);
+        const originalEntity = ref(null);
+        const saving = ref(false);
         const saveError = ref("");
         const canSave = computed(
           () =>
             included.value !== originalIncluded.value ||
             validated.value !== originalValidated.value ||
-            areaSelect.value !== originalArea.value
+            areaSelect.value !== originalArea.value ||
+            entitySelect.value !== originalEntity.value
         );
 
         const onKeydown = (e) => {
@@ -104,76 +105,45 @@
         };
         const onSave = async () => {
           saveError.value = "";
-          areaError.value = "";
-          let ok = true;
-          let areaChanged = false;
-
-          if (areaSelect.value !== originalArea.value) {
-            areaSaving.value = true;
+          saving.value = true;
+          try {
             const res = await fetch(
-              `{{BASE}}/api/devices/${props.device.id}`,
-              {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ area_id: areaSelect.value }),
-              }
-            );
-            areaSaving.value = false;
-            if (!res.ok) {
-              const data = await res.json().catch(() => null);
-              areaSelect.value = originalArea.value;
-              areaError.value =
-                data?.detail || `Request failed (${res.status})`;
-              ok = false;
-            } else {
-              const updated = await res.json();
-              props.device.area_id = updated.area_id;
-              const area = props.areas.find(
-                (a) => a.area_id === updated.area_id
-              );
-              props.device.area_name = area ? area.name : "Unassigned";
-              originalArea.value = areaSelect.value;
-              areaChanged = true;
-            }
-          }
-
-          if (ok && included.value !== originalIncluded.value) {
-            const endpoint = included.value ? "include" : "ignore";
-            const res = await fetch(
-              `{{BASE}}/api/devices/${props.device.id}/${endpoint}`,
-              { method: "POST" }
-            );
-            if (!res.ok) {
-              saveError.value = "Failed to save";
-              ok = false;
-            } else {
-              props.device.is_ignored = !included.value;
-              originalIncluded.value = included.value;
-            }
-          }
-
-          if (ok && validated.value !== originalValidated.value) {
-            const endpoint = validated.value ? "validate" : "unvalidate";
-            const res = await fetch(
-              `{{BASE}}/api/devices/${props.device.id}/${endpoint}`,
+              `{{BASE}}/api/devices/${props.device.id}/save`,
               {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ area_id: props.device.area_id }),
+                body: JSON.stringify({
+                  included: included.value,
+                  validated: validated.value,
+                  area_id: areaSelect.value,
+                  update_area: areaSelect.value !== originalArea.value,
+                  entity_id: entitySelect.value,
+                }),
               }
             );
             if (!res.ok) {
-              saveError.value = "Failed to save";
-              ok = false;
-            } else {
-              props.device.is_validated = validated.value;
-              originalValidated.value = validated.value;
+              const data = await res.json().catch(() => null);
+              saveError.value =
+                data?.detail || `Request failed (${res.status})`;
+              return;
             }
-          }
-
-          if (ok) {
-            if (areaChanged) emit("refresh");
+            props.device.is_ignored = !included.value;
+            props.device.is_validated = validated.value;
+            if (areaSelect.value !== originalArea.value) {
+              props.device.area_id = areaSelect.value;
+              const area = props.areas.find(
+                (a) => a.area_id === areaSelect.value
+              );
+              props.device.area_name = area ? area.name : "Unassigned";
+            }
+            originalIncluded.value = included.value;
+            originalValidated.value = validated.value;
+            originalArea.value = areaSelect.value;
+            originalEntity.value = entitySelect.value;
+            emit("refresh");
             emit("close");
+          } finally {
+            saving.value = false;
           }
         };
         onMounted(() => window.addEventListener("keydown", onKeydown));
@@ -182,9 +152,8 @@
           included,
           validated,
           areaSelect,
-          areaSaving,
-          areaError,
           entitySelect,
+          saving,
           saveError,
           canSave,
           openDevicePage,
@@ -214,12 +183,10 @@
               <div class="flex items-center justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
                 <dt class="shrink-0 text-gray-500">Area</dt>
                 <dd class="flex items-center gap-2">
-                  <select v-model="areaSelect" :disabled="areaSaving" class="max-w-[11rem] rounded-md border border-gray-300 bg-white px-2 py-1 text-sm">
+                  <select v-model="areaSelect" class="max-w-[11rem] rounded-md border border-gray-300 bg-white px-2 py-1 text-sm">
                     <option :value="null">Unassigned</option>
                     <option v-for="a in areas" :key="a.area_id" :value="a.area_id">{{ a.name }}</option>
                   </select>
-                  <span v-if="areaSaving" class="text-sm text-gray-400">Saving…</span>
-                  <span v-else-if="areaError" class="text-sm text-red-600">{{ areaError }}</span>
                 </dd>
               </div>
               <div class="flex items-center justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
@@ -248,7 +215,7 @@
             <div v-if="saveError" class="px-5 py-2 text-sm text-red-600">{{ saveError }}</div>
             <div class="flex justify-between border-t border-gray-200 px-5 py-4">
               <button class="rounded-md bg-blue-600 px-4 py-2 font-medium text-white hover:bg-blue-500" @click="openDevicePage">Open Device Page</button>
-              <button class="rounded-md bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-500 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500" :disabled="!canSave" @click="onSave">Save</button>
+              <button class="rounded-md bg-green-600 px-4 py-2 font-medium text-white hover:bg-green-500 disabled:cursor-not-allowed disabled:bg-gray-300 disabled:text-gray-500" :disabled="!canSave || saving" @click="onSave">{{ saving ? "Saving…" : "Save" }}</button>
             </div>
           </div>
         </div>

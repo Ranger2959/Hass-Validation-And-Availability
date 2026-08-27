@@ -26,30 +26,31 @@ async def list_devices() -> list[models.Device]:
         raise HTTPException(status_code=502, detail=f"Home Assistant request failed: {exc}")
 
 
-@api_router.post("/devices/{device_id}/ignore")
-async def ignore_device(device_id: str) -> dict:
-    return {"ignoredDevices": ha_data.ignore_device(device_id)}
-
-
-@api_router.post("/devices/{device_id}/include")
-async def include_device(device_id: str) -> dict:
-    return {"ignoredDevices": ha_data.unignore_device(device_id)}
-
-
-@api_router.post("/devices/{device_id}/validate")
-async def validate_device(
-    device_id: str, body: models.UpdateDeviceArea
-) -> dict:
+@api_router.post("/devices/{device_id}/save")
+async def save_device(device_id: str, body: models.SaveDevice) -> dict:
+    if body.update_area:
+        try:
+            await ha_api.update_device_area(device_id, body.area_id)
+        except models.HomeAssistantError as exc:
+            _LOGGER.error("Failed to update device area: %s", exc)
+            raise HTTPException(status_code=502, detail=str(exc))
+        except Exception as exc:
+            _LOGGER.error("Failed to update device: %s", exc)
+            raise HTTPException(
+                status_code=502,
+                detail=f"Home Assistant request failed: {exc}",
+            )
+    ignored, validated_devices = ha_data.save_device_state(
+        device_id,
+        body.included,
+        body.validated,
+        body.area_id,
+        body.entity_id,
+    )
     return {
-        "validatedDevices": ha_data.validate_device(
-            device_id, body.area_id
-        )
+        "ignoredDevices": ignored,
+        "validatedDevices": validated_devices,
     }
-
-
-@api_router.post("/devices/{device_id}/unvalidate")
-async def unvalidate_device(device_id: str) -> dict:
-    return {"validatedDevices": ha_data.unvalidate_device(device_id)}
 
 
 @api_router.get("/areas")
@@ -60,19 +61,6 @@ async def list_areas() -> list[models.HassArea]:
         _LOGGER.error("Failed to fetch areas from Home Assistant: %s", exc)
         raise HTTPException(status_code=502, detail=f"Home Assistant request failed: {exc}")
 
-
-@api_router.patch("/devices/{device_id}")
-async def update_device(
-    device_id: str, body: models.UpdateDeviceArea
-):
-    try:
-        return await ha_api.update_device_area(device_id, body.area_id)
-    except models.HomeAssistantError as exc:
-        _LOGGER.error("Failed to update device area: %s", exc)
-        raise HTTPException(status_code=502, detail=str(exc))
-    except Exception as exc:
-        _LOGGER.error("Failed to update device: %s", exc)
-        raise HTTPException(status_code=502, detail=f"Home Assistant request failed: {exc}")
 
 app = FastAPI()
 app.include_router(api_router)

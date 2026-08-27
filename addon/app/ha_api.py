@@ -3,7 +3,6 @@
 import asyncio
 import json
 import logging
-import os
 from typing import Any
 
 import websockets
@@ -11,7 +10,6 @@ import websockets
 import ha_config
 import ha_data
 from models import (
-    AppData,
     Device,
     HassEntity,
     HassManifest,

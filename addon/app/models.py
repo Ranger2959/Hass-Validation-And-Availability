@@ -54,10 +54,6 @@ class Device(BaseModel):
     entities: list[HassEntity] = []
 
 
-class UpdateDeviceArea(BaseModel):
-    area_id: str | None = None
-
-
 class HassArea(BaseModel):
     model_config = ConfigDict(populate_by_name=True)
 
@@ -96,6 +92,15 @@ class ValidatedDevice(BaseModel):
 
     device_id: str = Field(alias="deviceId")
     area_id: str | None = Field(default=None, alias="areaId")
+    entity_id: str | None = Field(default=None, alias="entityId")
+
+
+class SaveDevice(BaseModel):
+    included: bool
+    validated: bool
+    area_id: str | None = None
+    update_area: bool = False
+    entity_id: str | None = None
 
 
 class AppData(BaseModel):
