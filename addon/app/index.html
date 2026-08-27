@@ -28,13 +28,6 @@
       <table class="w-full border-collapse">
         <thead>
           <tr>
-            <th class="bg-gray-900 px-4 py-3 text-left text-white">
-              <button class="text-gray-400 hover:text-white" @click="toggleIgnoredSort" aria-label="Sort by ignored status">
-                <i v-if="ignoredSort === 'asc'" class="fa-solid fa-sort-up"></i>
-                <i v-else-if="ignoredSort === 'desc'" class="fa-solid fa-sort-down"></i>
-                <i v-else class="fa-solid fa-sort"></i>
-              </button>
-            </th>
             <th class="bg-gray-900 px-4 py-3 text-left text-white">Device Name</th>
             <th class="bg-gray-900 px-4 py-3 text-left text-white">Integration</th>
             <th class="bg-gray-900 px-4 py-3 text-left text-white">Floor/Area</th>
@@ -42,22 +35,18 @@
         </thead>
         <tbody>
           <tr v-if="loading" class="odd:bg-white even:bg-gray-100">
-            <td colspan="4" class="border-b border-gray-300 px-4 py-3">Loading devices…</td>
+            <td colspan="3" class="border-b border-gray-300 px-4 py-3">Loading devices…</td>
           </tr>
           <tr v-else-if="error" class="odd:bg-white even:bg-gray-100 text-red-600">
-            <td colspan="4" class="border-b border-gray-300 px-4 py-3">{{ error }}</td>
+            <td colspan="3" class="border-b border-gray-300 px-4 py-3">{{ error }}</td>
           </tr>
           <tr v-else-if="!visibleDevices.length" class="odd:bg-white even:bg-gray-100">
-            <td colspan="4" class="border-b border-gray-300 px-4 py-3">No devices found</td>
+            <td colspan="3" class="border-b border-gray-300 px-4 py-3">No devices found</td>
           </tr>
           <tr v-for="device in visibleDevices" v-else :key="device.id"
               class="cursor-pointer"
               :class="[rowClass(device), { 'text-gray-400 italic': device.is_ignored }]"
               @click="selected = device">
-            <td class="border-b border-gray-300 px-4 py-3 text-center">
-              <i v-if="device.is_ignored" class="fa-solid fa-ban text-red-500"></i>
-              <i v-if="device.is_area_validated" class="fa-solid fa-check text-green-600"></i>
-            </td>
             <td class="border-b border-gray-300 px-4 py-3">{{ device.name }}</td>
             <td class="border-b border-gray-300 px-4 py-3">{{ device.integration_name }}</td>
             <td class="border-b border-gray-300 px-4 py-3">{{ device.floor_name }} / {{ device.area_name }}</td>
@@ -228,25 +217,14 @@
         const devices = ref([]);
         const areas = ref([]);
         const showIgnored = ref(false);
-        const ignoredSort = ref(null);
         const loading = ref(true);
         const error = ref("");
         const selected = ref(null);
-
-        const toggleIgnoredSort = () => {
-          ignoredSort.value =
-            ignoredSort.value === "asc" ? "desc" : "asc";
-        };
 
         const visibleDevices = computed(() => {
           const list = showIgnored.value
             ? [...devices.value]
             : devices.value.filter((d) => !d.is_ignored);
-          if (ignoredSort.value === "asc") {
-            list.sort((a, b) => Number(a.is_ignored) - Number(b.is_ignored));
-          } else if (ignoredSort.value === "desc") {
-            list.sort((a, b) => Number(b.is_ignored) - Number(a.is_ignored));
-          }
           return list;
         });
 
@@ -304,7 +282,7 @@
           }
         });
 
-        return { devices, areas, showIgnored, ignoredSort, toggleIgnoredSort, totalDevices, ignoredCount, validatedCount, areaMismatchCount, visibleDevices, loading, error, selected, refreshDevices, rowClass };
+        return { devices, areas, showIgnored, totalDevices, ignoredCount, validatedCount, areaMismatchCount, visibleDevices, loading, error, selected, refreshDevices, rowClass };
       },
     }).mount("#app");
   </script>
