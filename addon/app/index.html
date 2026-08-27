@@ -85,8 +85,8 @@
         const originalValidated = ref(!!props.device.is_validated);
         const areaSelect = ref(props.device.area_id || null);
         const originalArea = ref(props.device.area_id || null);
-        const entitySelect = ref(null);
-        const originalEntity = ref(null);
+        const entitySelect = ref(props.device.monitored_entity || null);
+        const originalEntity = ref(props.device.monitored_entity || null);
         const saving = ref(false);
         const saveError = ref("");
         const canSave = computed(
@@ -117,7 +117,7 @@
                   validated: validated.value,
                   area_id: areaSelect.value,
                   update_area: areaSelect.value !== originalArea.value,
-                  entity_id: entitySelect.value,
+                  monitored_entity_id: entitySelect.value,
                 }),
               }
             );
@@ -190,7 +190,7 @@
                 </dd>
               </div>
               <div class="flex items-center justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
-                <dt class="shrink-0 text-gray-500">Entities</dt>
+                <dt class="shrink-0 text-gray-500">Entity Monitored</dt>
                 <dd>
                   <select v-if="device.entities.length" v-model="entitySelect" class="max-w-[13rem] rounded-md border border-gray-300 bg-white px-2 py-1 text-sm">
                     <option :value="null"></option>

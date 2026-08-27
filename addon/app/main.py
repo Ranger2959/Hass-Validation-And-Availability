@@ -45,7 +45,7 @@ async def save_device(device_id: str, body: models.SaveDevice) -> dict:
         body.included,
         body.validated,
         body.area_id,
-        body.entity_id,
+        body.monitored_entity_id,
     )
     return {
         "ignoredDevices": ignored,

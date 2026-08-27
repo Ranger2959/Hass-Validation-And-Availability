@@ -28,7 +28,7 @@ def save_device_state(
     included: bool,
     validated: bool,
     area_id: str | None,
-    entity_id: str | None,
+    monitored_entity_id: str | None,
 ) -> tuple[list[str], list[ValidatedDevice]]:
     data = _load_data()
     changed = False
@@ -45,7 +45,9 @@ def save_device_state(
     if existing is None and validated:
         data.validated_devices.append(
             ValidatedDevice(
-                device_id=device_id, area_id=area_id, entity_id=entity_id
+                device_id=device_id,
+                area_id=area_id,
+                monitored_entity_id=monitored_entity_id,
             )
         )
         changed = True
@@ -55,10 +57,11 @@ def save_device_state(
         ]
         changed = True
     elif existing is not None and (
-        existing.area_id != area_id or existing.entity_id != entity_id
+        existing.area_id != area_id
+        or existing.monitored_entity_id != monitored_entity_id
     ):
         existing.area_id = area_id
-        existing.entity_id = entity_id
+        existing.monitored_entity_id = monitored_entity_id
         changed = True
     if changed:
         _save_data(data)

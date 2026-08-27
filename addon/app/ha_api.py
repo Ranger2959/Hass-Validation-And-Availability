@@ -156,6 +156,7 @@ async def get_devices_with_location() -> list[Device]:
                     and validated.area_id != device.area_id
                 ),
                 entities=entities_by_device.get(device.id, []),
+                monitored_entity=validated.monitored_entity_id if validated else None,
             )
         )
     return result

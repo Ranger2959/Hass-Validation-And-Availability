@@ -52,6 +52,7 @@ class Device(BaseModel):
     is_validated: bool = False
     is_area_mismatched: bool = False
     entities: list[HassEntity] = []
+    monitored_entity: str | None = None
 
 
 class HassArea(BaseModel):
@@ -92,7 +93,7 @@ class ValidatedDevice(BaseModel):
 
     device_id: str = Field(alias="deviceId")
     area_id: str | None = Field(default=None, alias="areaId")
-    entity_id: str | None = Field(default=None, alias="entityId")
+    monitored_entity_id: str | None = Field(default=None, alias="entityId")
 
 
 class SaveDevice(BaseModel):
@@ -100,7 +101,7 @@ class SaveDevice(BaseModel):
     validated: bool
     area_id: str | None = None
     update_area: bool = False
-    entity_id: str | None = None
+    monitored_entity_id: str | None = None
 
 
 class AppData(BaseModel):
