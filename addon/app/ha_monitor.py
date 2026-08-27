@@ -25,6 +25,19 @@ def refresh() -> None:
     _refresh_monitored()
 
 
+async def check_entity(entity_id: str) -> None:
+    try:
+        states = await ha_api.get_states()
+    except Exception as exc:
+        _LOGGER.error("Failed to fetch entity states: %s", exc)
+        return
+    state = next(
+        (s.state for s in states if s.entity_id == entity_id),
+        None,
+    )
+    _log_if_bad(entity_id, state)
+
+
 def _log_if_bad(entity_id: str, state: str | None) -> None:
     if state in ("unavailable", "unknown"):
         _LOGGER.info("Selected entity %s is %s", entity_id, state)

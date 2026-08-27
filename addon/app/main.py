@@ -43,6 +43,15 @@ async def save_device(device_id: str, body: models.SaveDevice) -> dict:
                 status_code=502,
                 detail=f"Home Assistant request failed: {exc}",
             )
+    before = ha_data._load_data()
+    prev_entity = next(
+        (
+            v.monitored_entity_id
+            for v in before.validated_devices
+            if v.device_id == device_id
+        ),
+        None,
+    )
     ignored, validated_devices = ha_data.save_device_state(
         device_id,
         body.is_included,
@@ -51,6 +60,8 @@ async def save_device(device_id: str, body: models.SaveDevice) -> dict:
         body.monitored_entity_id,
     )
     ha_monitor.refresh()
+    if body.monitored_entity_id and body.monitored_entity_id != prev_entity:
+        await ha_monitor.check_entity(body.monitored_entity_id)
     return {
         "ignoredDevices": ignored,
         "validatedDevices": validated_devices,
