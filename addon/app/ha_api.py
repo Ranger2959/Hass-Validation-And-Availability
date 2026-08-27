@@ -3,7 +3,7 @@
 import asyncio
 import json
 import logging
-from typing import Any
+from typing import Any, AsyncIterator
 
 import websockets
 
@@ -12,6 +12,7 @@ import ha_data
 from models import (
     Device,
     HassEntity,
+    HassState,
     HassManifest,
     HassArea,
     HassConfigEntry,
@@ -26,8 +27,9 @@ _WS_URL = ha_config._HA_WS_URL
 _TOKEN = ha_config._token()
 
 
-async def _send_command(payload: dict) -> Any:
-    async with websockets.connect(_WS_URL, max_size=None) as ws:
+async def _connect():
+    ws = await websockets.connect(_WS_URL, max_size=None)
+    try:
         msg = json.loads(await ws.recv())
         if msg.get("type") != "auth_required":
             raise HomeAssistantError(
@@ -39,6 +41,15 @@ async def _send_command(payload: dict) -> Any:
             raise HomeAssistantError(
                 f"Authentication failed: {msg.get('type')}"
             )
+    except BaseException:
+        await ws.close()
+        raise
+    return ws
+
+
+async def _send_command(payload: dict) -> Any:
+    ws = await _connect()
+    try:
         await ws.send(json.dumps(payload))
         while True:
             msg = json.loads(await ws.recv())
@@ -49,6 +60,37 @@ async def _send_command(payload: dict) -> Any:
                 msg.get("message", "unknown Home Assistant error")
             )
         return msg.get("result")
+    finally:
+        await ws.close()
+
+
+async def subscribe_events(event_type: str) -> AsyncIterator[dict]:
+    ws = await _connect()
+    try:
+        msg_id = 9
+        await ws.send(
+            json.dumps(
+                {
+                    "id": msg_id,
+                    "type": "subscribe_events",
+                    "event_type": event_type,
+                }
+            )
+        )
+        while True:
+            msg = json.loads(await ws.recv())
+            if msg.get("id") == msg_id:
+                if not msg.get("success"):
+                    raise HomeAssistantError(
+                        msg.get("message", "subscribe failed")
+                    )
+                break
+        while True:
+            msg = json.loads(await ws.recv())
+            if msg.get("type") == "event":
+                yield msg["event"]
+    finally:
+        await ws.close()
 
 
 async def get_hass_devices() -> list[HassDevice]:
@@ -77,6 +119,13 @@ async def get_entities() -> list[HassEntity]:
         {"id": 7, "type": "config/entity_registry/list"}
     )
     return [HassEntity(**e) for e in result]
+
+
+async def get_states() -> list[HassState]:
+    result = await _send_command(
+        {"id": 8, "type": "get_states"}
+    )
+    return [HassState.model_validate(s) for s in result]
 
 
 async def get_config_entries() -> list[HassConfigEntry]:

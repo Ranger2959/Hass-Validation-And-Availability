@@ -41,6 +41,14 @@ class HassEntity(BaseModel):
     # entity_category: str | None = None
 
 
+class HassState(BaseModel):
+    entity_id: str
+    state: str
+    attributes: dict = {}
+    last_changed: str | None = None
+    last_updated: str | None = None
+
+
 class Device(BaseModel):
     id: str
     name: str

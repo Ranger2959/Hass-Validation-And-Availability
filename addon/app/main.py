@@ -1,12 +1,15 @@
 """Device Board -- FastAPI panel server for Home Assistant."""
 
+import asyncio
 import logging
 import os
+from contextlib import asynccontextmanager
 import uvicorn
 from fastapi import APIRouter, FastAPI, HTTPException, Request
 from fastapi.responses import FileResponse, HTMLResponse
 import ha_api
 import ha_data
+import ha_monitor
 import models
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(name)s: %(message)s")
@@ -47,6 +50,7 @@ async def save_device(device_id: str, body: models.SaveDevice) -> dict:
         body.area_id,
         body.monitored_entity_id,
     )
+    ha_monitor.refresh()
     return {
         "ignoredDevices": ignored,
         "validatedDevices": validated_devices,
@@ -62,7 +66,21 @@ async def list_areas() -> list[models.HassArea]:
         raise HTTPException(status_code=502, detail=f"Home Assistant request failed: {exc}")
 
 
-app = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    task = asyncio.create_task(ha_monitor.monitor())
+    _LOGGER.info("Selected-entity monitor started")
+    try:
+        yield
+    finally:
+        task.cancel()
+        try:
+            await task
+        except asyncio.CancelledError:
+            pass
+
+
+app = FastAPI(lifespan=lifespan)
 app.include_router(api_router)
 
 @app.get("/icon.png")
