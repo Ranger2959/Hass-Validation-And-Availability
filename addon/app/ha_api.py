@@ -29,7 +29,7 @@ _TOKEN = ha_config._token()
 
 
 async def _send_command(payload: dict) -> Any:
-    async with websockets.connect(_WS_URL) as ws:
+    async with websockets.connect(_WS_URL, max_size=None) as ws:
         msg = json.loads(await ws.recv())
         if msg.get("type") != "auth_required":
             raise HomeAssistantError(
