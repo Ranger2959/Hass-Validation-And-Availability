@@ -35,8 +35,8 @@ class HassEntity(BaseModel):
     name: str | None = None
     # original_name: str | None = None
     # platform: str | None = None
-    # disabled_by: str | None = None
-    # hidden_by: str | None = None
+    disabled_by: str | None = None
+    hidden_by: str | None = None
     # icon: str | None = None
     # entity_category: str | None = None
 

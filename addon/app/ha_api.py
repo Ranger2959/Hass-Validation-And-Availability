@@ -113,7 +113,11 @@ async def get_devices_with_location() -> list[Device]:
     manifest_by_domain = {m.domain: m for m in manifests}
     entities_by_device: dict[str, list[HassEntity]] = {}
     for entity in entities:
-        if entity.device_id:
+        if (
+            entity.device_id
+            and entity.disabled_by is None
+            and entity.hidden_by is None
+        ):
             entities_by_device.setdefault(entity.device_id, []).append(entity)
     app_data = ha_data._load_data()
     ignored_ids = set(app_data.ignored_devices)
