@@ -14,6 +14,9 @@
       <div>Total Devices: {{ totalDevices }}</div>
       <div>Ignored Devices: {{ ignoredCount }}</div>
       <div>Validated Devices: {{ validatedCount }}</div>
+      <div :class="{ 'text-red-600': areaMismatchCount }">
+        Area Mismatch: {{ areaMismatchCount }}
+      </div>
     </div>
     <div class="mb-2 flex justify-end">
       <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
@@ -269,11 +272,13 @@
         });
 
         const rowClass = (d) =>
-          d.is_ignored
-            ? "bg-gray-100 hover:bg-gray-200"
-            : d.is_validated
-              ? "bg-green-100 hover:bg-green-200"
-              : "bg-yellow-100 hover:bg-yellow-200";
+          d.is_area_mismatched
+            ? "bg-red-100 hover:bg-red-200"
+            : d.is_ignored
+              ? "bg-gray-100 hover:bg-gray-200"
+              : d.is_validated
+                ? "bg-green-100 hover:bg-green-200"
+                : "bg-yellow-100 hover:bg-yellow-200";
 
         const totalDevices = computed(() => devices.value.length);
         const ignoredCount = computed(() =>
@@ -281,6 +286,9 @@
         );
         const validatedCount = computed(() =>
           devices.value.filter((d) => d.is_validated).length
+        );
+        const areaMismatchCount = computed(() =>
+          devices.value.filter((d) => d.is_area_mismatched).length
         );
 
         const refreshDevices = async () => {
@@ -317,7 +325,7 @@
           }
         });
 
-        return { devices, areas, showIgnored, ignoredSort, toggleIgnoredSort, totalDevices, ignoredCount, validatedCount, visibleDevices, loading, error, selected, refreshDevices, rowClass };
+        return { devices, areas, showIgnored, ignoredSort, toggleIgnoredSort, totalDevices, ignoredCount, validatedCount, areaMismatchCount, visibleDevices, loading, error, selected, refreshDevices, rowClass };
       },
     }).mount("#app");
   </script>

@@ -37,6 +37,7 @@ class Device(BaseModel):
     integration_name: str | None = None
     is_ignored: bool = False
     is_validated: bool = False
+    is_area_mismatched: bool = False
 
 
 class UpdateDeviceArea(BaseModel):

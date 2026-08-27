@@ -102,9 +102,10 @@ async def get_devices_with_location() -> list[Device]:
     manifest_by_domain = {m.domain: m for m in manifests}
     app_data = ha_data._load_data()
     ignored_ids = set(app_data.ignored_devices)
-    validated_ids = {v.device_id for v in app_data.validated_devices}
+    validated_by_id = {v.device_id: v for v in app_data.validated_devices}
     result = []
     for device in devices:
+        validated = validated_by_id.get(device.id)
         area = area_by_id.get(device.area_id) if device.area_id else None
         floor = (
             floor_by_id.get(area.floor_id)
@@ -132,7 +133,11 @@ async def get_devices_with_location() -> list[Device]:
                     else domain or "Unknown"
                 ),
                 is_ignored=device.id in ignored_ids,
-                is_validated=device.id in validated_ids,
+                is_validated=validated is not None,
+                is_area_mismatched=(
+                    validated is not None
+                    and validated.area_id != device.area_id
+                ),
             )
         )
     return result
