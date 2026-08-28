@@ -70,20 +70,15 @@
       setup(props, { emit }) {
         const included = ref(!props.device.is_ignored);
         const originalIncluded = ref(!props.device.is_ignored);
-        const validated = ref(!!props.device.is_area_validated);
-        const originalValidated = ref(!!props.device.is_area_validated);
         const areaSelect = ref(props.device.area_id || null);
         const originalArea = ref(props.device.area_id || null);
         const entitySelect = ref(props.device.monitored_entity || null);
-        const originalEntity = ref(props.device.monitored_entity || null);
         const saving = ref(false);
         const saveError = ref("");
         const canSave = computed(
           () =>
-            included.value !== originalIncluded.value ||
-            validated.value !== originalValidated.value ||
-            areaSelect.value !== originalArea.value ||
-            entitySelect.value !== originalEntity.value
+            (originalIncluded.value === false && included.value === true) ||
+            (areaSelect.value !== null && entitySelect.value !== null)
         );
 
         const onKeydown = (e) => {
@@ -103,7 +98,8 @@
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify({
                   is_included: included.value,
-                  is_area_validated: validated.value,
+                  is_area_validated:
+                    areaSelect.value !== null && entitySelect.value !== null,
                   area_id: areaSelect.value,
                   update_area: areaSelect.value !== originalArea.value,
                   monitored_entity_id: entitySelect.value,
@@ -117,7 +113,8 @@
               return;
             }
             props.device.is_ignored = !included.value;
-            props.device.is_area_validated = validated.value;
+            props.device.is_area_validated =
+              areaSelect.value !== null && entitySelect.value !== null;
             if (areaSelect.value !== originalArea.value) {
               props.device.area_id = areaSelect.value;
               const area = props.areas.find(
@@ -126,9 +123,7 @@
               props.device.area_name = area ? area.name : "Unassigned";
             }
             originalIncluded.value = included.value;
-            originalValidated.value = validated.value;
             originalArea.value = areaSelect.value;
-            originalEntity.value = entitySelect.value;
             emit("refresh");
             emit("close");
           } finally {
@@ -139,7 +134,6 @@
         onBeforeUnmount(() => window.removeEventListener("keydown", onKeydown));
         return {
           included,
-          validated,
           areaSelect,
           entitySelect,
           saving,
@@ -192,12 +186,6 @@
                 <dt class="shrink-0 text-gray-500">Included</dt>
                 <dd class="text-right">
                   <input type="checkbox" v-model="included" class="h-4 w-4 accent-gray-900" />
-                </dd>
-              </div>
-              <div class="flex items-center justify-between gap-4 border-b border-gray-100 py-2 last:border-0">
-                <dt class="shrink-0 text-gray-500">Area Validated</dt>
-                <dd class="text-right">
-                  <input type="checkbox" v-model="validated" class="h-4 w-4 accent-gray-900" />
                 </dd>
               </div>
             </dl>
