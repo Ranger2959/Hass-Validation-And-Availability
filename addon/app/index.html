@@ -10,50 +10,61 @@
 <body class="bg-gray-50 text-gray-900 antialiased">
   <div id="app" class="mx-auto max-w-4xl px-4 py-8">
     <h1 class="mb-2 text-3xl font-bold">Device Board</h1>
-    <div class="mb-3 text-sm text-gray-600">
-      <div>Total Devices: {{ totalDevices }}</div>
-      <div>Ignored Devices: {{ ignoredCount }}</div>
-      <div>Area Validated Devices: {{ validatedCount }}</div>
-      <div :class="{ 'text-red-600': areaMismatchCount }">
-        Area Mismatch: {{ areaMismatchCount }}
+    <div class="mb-4 flex gap-6 border-b border-gray-200">
+      <button
+        v-for="tab in tabs"
+        :key="tab"
+        class="-mb-px border-b-2 px-1 pb-2 text-sm font-medium"
+        :class="activeTab === tab ? 'border-gray-900 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'"
+        @click="activeTab = tab"
+      >{{ tab }}</button>
+    </div>
+    <div v-show="activeTab === 'Devices'">
+      <div class="mb-3 text-sm text-gray-600">
+        <div>Total Devices: {{ totalDevices }}</div>
+        <div>Ignored Devices: {{ ignoredCount }}</div>
+        <div>Area Validated Devices: {{ validatedCount }}</div>
+        <div :class="{ 'text-red-600': areaMismatchCount }">
+          Area Mismatch: {{ areaMismatchCount }}
+        </div>
       </div>
-    </div>
-    <div class="mb-2 flex items-center gap-3">
-      <input v-model="search" type="search" placeholder="Search by name, integration, or floor/area…" class="min-w-0 flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm" />
-      <label class="flex shrink-0 cursor-pointer items-center gap-2 text-sm text-gray-700">
-        <span>Show Ignored</span>
-        <input type="checkbox" v-model="showIgnored" class="h-4 w-4 accent-gray-900" />
-      </label>
-    </div>
-    <div class="overflow-x-auto rounded-lg border border-gray-300 bg-white">
-      <table class="w-full border-collapse">
-        <thead>
-          <tr>
-            <th class="bg-gray-900 px-4 py-3 text-left text-white">Device Name</th>
-            <th class="bg-gray-900 px-4 py-3 text-left text-white">Integration</th>
-            <th class="bg-gray-900 px-4 py-3 text-left text-white">Floor/Area</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-if="loading" class="odd:bg-white even:bg-gray-100">
-            <td colspan="3" class="border-b border-gray-300 px-4 py-3">Loading devices…</td>
-          </tr>
-          <tr v-else-if="error" class="odd:bg-white even:bg-gray-100 text-red-600">
-            <td colspan="3" class="border-b border-gray-300 px-4 py-3">{{ error }}</td>
-          </tr>
-          <tr v-else-if="!visibleDevices.length" class="odd:bg-white even:bg-gray-100">
-            <td colspan="3" class="border-b border-gray-300 px-4 py-3">No devices found</td>
-          </tr>
-          <tr v-for="device in visibleDevices" v-else :key="device.id"
-              class="cursor-pointer"
-              :class="[rowClass(device), { 'text-gray-400 italic': device.is_ignored }]"
-              @click="selected = device">
-            <td class="border-b border-gray-300 px-4 py-3">{{ device.name }}</td>
-            <td class="border-b border-gray-300 px-4 py-3">{{ device.integration_name }}</td>
-            <td class="border-b border-gray-300 px-4 py-3">{{ device.floor_name }} / {{ device.area_name }}</td>
-          </tr>
-        </tbody>
-      </table>
+      <div class="mb-2 flex items-center gap-3">
+        <input v-model="search" type="search" placeholder="Search by name, integration, or floor/area…" class="min-w-0 max-w-[40vw] flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm" />
+        <label class="flex shrink-0 cursor-pointer items-center gap-2 text-sm text-gray-700">
+          <span>Show Ignored</span>
+          <input type="checkbox" v-model="showIgnored" class="h-4 w-4 accent-gray-900" />
+        </label>
+      </div>
+      <div class="overflow-x-auto rounded-lg border border-gray-300 bg-white">
+        <table class="w-full border-collapse">
+          <thead>
+            <tr>
+              <th class="bg-gray-900 px-4 py-3 text-left text-white">Device Name</th>
+              <th class="bg-gray-900 px-4 py-3 text-left text-white">Integration</th>
+              <th class="bg-gray-900 px-4 py-3 text-left text-white">Floor/Area</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-if="loading" class="odd:bg-white even:bg-gray-100">
+              <td colspan="3" class="border-b border-gray-300 px-4 py-3">Loading devices…</td>
+            </tr>
+            <tr v-else-if="error" class="odd:bg-white even:bg-gray-100 text-red-600">
+              <td colspan="3" class="border-b border-gray-300 px-4 py-3">{{ error }}</td>
+            </tr>
+            <tr v-else-if="!visibleDevices.length" class="odd:bg-white even:bg-gray-100">
+              <td colspan="3" class="border-b border-gray-300 px-4 py-3">No devices found</td>
+            </tr>
+            <tr v-for="device in visibleDevices" v-else :key="device.id"
+                class="cursor-pointer"
+                :class="[rowClass(device), { 'text-gray-400 italic': device.is_ignored }]"
+                @click="selected = device">
+              <td class="border-b border-gray-300 px-4 py-3">{{ device.name }}</td>
+              <td class="border-b border-gray-300 px-4 py-3">{{ device.integration_name }}</td>
+              <td class="border-b border-gray-300 px-4 py-3">{{ device.floor_name }} / {{ device.area_name }}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
     </div>
     <device-modal v-if="selected" :device="selected" :areas="areas" @close="selected = null" @refresh="refreshDevices" />
   </div>
@@ -210,6 +221,8 @@
         const loading = ref(true);
         const error = ref("");
         const selected = ref(null);
+        const tabs = ref(["Devices"]);
+        const activeTab = ref("Devices");
 
         const visibleDevices = computed(() => {
           const q = search.value.trim().toLowerCase();
@@ -280,7 +293,7 @@
           }
         });
 
-        return { devices, areas, showIgnored, search, totalDevices, ignoredCount, validatedCount, areaMismatchCount, visibleDevices, loading, error, selected, refreshDevices, rowClass };
+        return { devices, areas, showIgnored, search, tabs, activeTab, totalDevices, ignoredCount, validatedCount, areaMismatchCount, visibleDevices, loading, error, selected, refreshDevices, rowClass };
       },
     }).mount("#app");
   </script>
