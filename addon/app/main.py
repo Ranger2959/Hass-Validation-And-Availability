@@ -100,7 +100,13 @@ async def handle_icon() -> FileResponse:
 
 @app.get("/{tail:path}")
 @app.get("/")
-async def _serve_index(request: Request) -> HTMLResponse:
+async def _serve_index(request: Request):
+    tail = request.path_params.get("tail", "")
+    if tail:
+        app_dir = os.path.realpath(os.path.dirname(_INDEX_PATH))
+        static_path = os.path.realpath(os.path.join(app_dir, tail))
+        if static_path.startswith(app_dir + os.sep) and os.path.isfile(static_path):
+            return FileResponse(static_path)
     ingress_path = request.headers.get("X-Ingress-Path", "").rstrip("/")
     with open(_INDEX_PATH, "r") as f:
         html = f.read()
