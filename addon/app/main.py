@@ -77,6 +77,11 @@ async def list_areas() -> list[models.HassArea]:
         raise HTTPException(status_code=502, detail=f"Home Assistant request failed: {exc}")
 
 
+@api_router.get("/cache")
+async def get_cache() -> dict:
+    return ha_data._load_data().model_dump(by_alias=True)
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     task = asyncio.create_task(ha_monitor.monitor())
