@@ -18,14 +18,12 @@
         Area Mismatch: {{ areaMismatchCount }}
       </div>
     </div>
-    <div class="mb-2 flex justify-end">
-      <label class="flex cursor-pointer items-center gap-2 text-sm text-gray-700">
+    <div class="mb-2 flex items-center gap-3">
+      <input v-model="search" type="search" placeholder="Search by name, integration, or floor/area…" class="min-w-0 flex-1 rounded-md border border-gray-300 bg-white px-3 py-2 text-sm" />
+      <label class="flex shrink-0 cursor-pointer items-center gap-2 text-sm text-gray-700">
         <span>Show Ignored</span>
         <input type="checkbox" v-model="showIgnored" class="h-4 w-4 accent-gray-900" />
       </label>
-    </div>
-    <div class="mb-2">
-      <input v-model="search" type="search" placeholder="Search by name, integration, or floor/area…" class="w-full rounded-md border border-gray-300 bg-white px-3 py-2 text-sm" />
     </div>
     <div class="overflow-x-auto rounded-lg border border-gray-300 bg-white">
       <table class="w-full border-collapse">
