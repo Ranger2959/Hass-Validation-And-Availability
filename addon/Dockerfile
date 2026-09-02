@@ -1,6 +1,6 @@
 FROM ghcr.io/home-assistant/base-python:latest
 
-RUN pip3 install --no-cache-dir fastapi uvicorn websockets pydantic
+RUN pip3 install --no-cache-dir fastapi uvicorn websockets pydantic httpx
 
 COPY app/ /app/
 COPY icon.png /app/icon.png

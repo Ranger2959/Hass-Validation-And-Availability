@@ -9,6 +9,9 @@ _LOGGER = logging.getLogger(__name__)
 
 _MONITORED: set[str] = set()
 
+_BOARD_SENSOR = "sensor.device_board_unavailable_devices"
+_UNAVAILABLE_STATES = ("unavailable", "unknown")
+
 
 def _refresh_monitored() -> set[str]:
     global _MONITORED
@@ -39,8 +42,25 @@ async def check_entity(entity_id: str) -> None:
 
 
 def _log_if_bad(entity_id: str, state: str | None) -> None:
-    if state in ("unavailable", "unknown"):
+    if state in _UNAVAILABLE_STATES:
         _LOGGER.info("Selected entity %s is %s", entity_id, state)
+
+
+def _unavailable_count(state_by_id: dict[str, str]) -> int:
+    return sum(
+        1
+        for entity_id in _MONITORED
+        if state_by_id.get(entity_id) in _UNAVAILABLE_STATES
+    )
+
+
+async def update_board_sensor(state_by_id: dict[str, str]) -> None:
+    count = _unavailable_count(state_by_id)
+    _LOGGER.info("%s = %d", _BOARD_SENSOR, count)
+    try:
+        await ha_api.update_state(_BOARD_SENSOR, str(count))
+    except Exception as exc:
+        _LOGGER.error("Failed to update %s: %s", _BOARD_SENSOR, exc)
 
 
 async def monitor() -> None:
@@ -54,6 +74,7 @@ async def monitor() -> None:
     state_by_id = {s.entity_id: s.state for s in states}
     for entity_id in _MONITORED:
         _log_if_bad(entity_id, state_by_id.get(entity_id))
+    await update_board_sensor(state_by_id)
     try:
         async for event in ha_api.subscribe_events("state_changed"):
             entity_id = event.get("entity_id")

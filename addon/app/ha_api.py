@@ -5,6 +5,7 @@ import json
 import logging
 from typing import Any, AsyncIterator
 
+import httpx
 import websockets
 
 import ha_config
@@ -227,3 +228,23 @@ async def update_device_area(
         }
     )
     return HassDevice(**result)
+
+
+async def update_state(
+    entity_id: str, state: str, attributes: dict | None = None
+) -> HassState:
+    payload: dict[str, Any] = {"state": state}
+    if attributes:
+        payload["attributes"] = attributes
+    async with httpx.AsyncClient(timeout=10) as client:
+        resp = await client.post(
+            f"{ha_config._HA_API_URL}/states/{entity_id}",
+            json=payload,
+            headers={"Authorization": f"Bearer {_TOKEN}"},
+        )
+    if resp.status_code not in (200, 201):
+        raise HomeAssistantError(
+            f"Failed to update state for {entity_id}: "
+            f"{resp.status_code} {resp.text}"
+        )
+    return HassState.model_validate(resp.json())

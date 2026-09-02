@@ -14,8 +14,10 @@ if _BASE_URL:
         _BASE_URL.replace("https://", "wss://").replace("http://", "ws://")
         + "/api/websocket"
     )
+    _HA_API_URL = _BASE_URL + "/api"
 else:
     _HA_WS_URL = "ws://supervisor/core/websocket"
+    _HA_API_URL = "http://supervisor/core/api"
 
 
 def _token() -> str:
