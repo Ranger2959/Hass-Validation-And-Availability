@@ -11,6 +11,7 @@ _MONITORED: set[str] = set()
 
 _BOARD_SENSOR = "sensor.device_board_unavailable_devices"
 _UNAVAILABLE_STATES = ("unavailable", "unknown")
+_PUBLISHED: int | None = None
 
 
 def _refresh_monitored() -> set[str]:
@@ -55,12 +56,17 @@ def _unavailable_count(state_by_id: dict[str, str]) -> int:
 
 
 async def update_board_sensor(state_by_id: dict[str, str]) -> None:
+    global _PUBLISHED
     count = _unavailable_count(state_by_id)
+    if count == _PUBLISHED:
+        return
     _LOGGER.info("%s = %d", _BOARD_SENSOR, count)
     try:
         await ha_api.update_state(_BOARD_SENSOR, str(count))
     except Exception as exc:
         _LOGGER.error("Failed to update %s: %s", _BOARD_SENSOR, exc)
+        return
+    _PUBLISHED = count
 
 
 async def monitor() -> None:
@@ -85,5 +91,10 @@ async def monitor() -> None:
                 entity_id,
                 new_state.get("state") if new_state else None,
             )
+            if new_state:
+                state_by_id[entity_id] = new_state.get("state")
+            else:
+                state_by_id.pop(entity_id, None)
+            await update_board_sensor(state_by_id)
     except Exception as exc:
         _LOGGER.error("Entity monitor stopped: %s", exc)
