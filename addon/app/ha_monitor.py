@@ -11,7 +11,7 @@ _MONITORED: set[str] = set()
 
 _BOARD_SENSOR = "sensor.device_board_unavailable_devices"
 _UNAVAILABLE_STATES = ("unavailable", "unknown")
-_PUBLISHED: int | None = None
+_PUBLISHED: list[str] | None = None
 
 
 def _refresh_monitored() -> set[str]:
@@ -47,26 +47,54 @@ def _log_if_bad(entity_id: str, state: str | None) -> None:
         _LOGGER.info("Selected entity %s is %s", entity_id, state)
 
 
-def _unavailable_count(state_by_id: dict[str, str]) -> int:
-    return sum(
-        1
+def _unavailable_devices(state_by_id: dict[str, str]) -> list[str]:
+    return sorted(
+        entity_id
         for entity_id in _MONITORED
         if state_by_id.get(entity_id) in _UNAVAILABLE_STATES
     )
 
 
+async def _resolve_names(entity_ids: list[str]) -> list[str]:
+    data = ha_data._load_data()
+    device_by_entity = {
+        v.monitored_entity_id: v.device_id
+        for v in data.validated_devices
+        if v.monitored_entity_id
+    }
+    name_by_device: dict[str, str] = {}
+    try:
+        devices = await ha_api.get_hass_devices()
+    except Exception as exc:
+        _LOGGER.error("Failed to load device registry: %s", exc)
+        devices = []
+    for device in devices:
+        name_by_device[device.id] = (
+            device.name_by_user or device.name or "Unnamed device"
+        )
+    return [
+        name_by_device.get(device_by_entity.get(entity_id), entity_id)
+        for entity_id in entity_ids
+    ]
+
+
 async def update_board_sensor(state_by_id: dict[str, str]) -> None:
     global _PUBLISHED
-    count = _unavailable_count(state_by_id)
-    if count == _PUBLISHED:
+    unavailable = _unavailable_devices(state_by_id)
+    if unavailable == _PUBLISHED:
         return
-    _LOGGER.info("%s = %d", _BOARD_SENSOR, count)
+    names = await _resolve_names(unavailable)
+    _LOGGER.info("%s = %d", _BOARD_SENSOR, len(unavailable))
     try:
-        await ha_api.update_state(_BOARD_SENSOR, str(count))
+        await ha_api.update_state(
+            _BOARD_SENSOR,
+            str(len(unavailable)),
+            attributes={"unavailable_devices": ",".join(names)},
+        )
     except Exception as exc:
         _LOGGER.error("Failed to update %s: %s", _BOARD_SENSOR, exc)
         return
-    _PUBLISHED = count
+    _PUBLISHED = unavailable
 
 
 async def monitor() -> None:
