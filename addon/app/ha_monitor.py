@@ -87,10 +87,10 @@ async def monitor() -> None:
     await update_board_sensor(state_by_id)
     try:
         async for event in ha_api.subscribe_events("state_changed"):
-            _LOGGER.info(event)
             entity_id = event.get("entity_id")
             if entity_id not in _MONITORED:
                 continue
+            _LOGGER.info(event)
             new_state = event.get("new_state")
             if new_state:
                 state_by_id[entity_id] = new_state.get("state")
